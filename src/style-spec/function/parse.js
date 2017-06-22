@@ -13,12 +13,12 @@ const {
     array
 } = require('./types');
 
-const expressions = require('./expressions');
-
 /*::
  import type { TypeError, TypedExpression } from './type_check.js';
 
  import type { ExpressionName } from './expression_name.js';
+
+ import type { Definition } from './expressions.js';
 
  export type ParseError = {|
      error: string,
@@ -35,7 +35,11 @@ module.exports = parseExpression;
  *
  * @private
  */
-function parseExpression(expr: mixed, path: Array<number> = []) /*: TypedExpression | ParseError */ {
+function parseExpression(
+    definitions: {[string]: Definition},
+    expr: mixed,
+    path: Array<number> = []
+) /*: TypedExpression | ParseError */ {
     const key = path.join('.');
     if (expr === null || typeof expr === 'undefined') return {
         literal: true,
@@ -80,7 +84,7 @@ function parseExpression(expr: mixed, path: Array<number> = []) /*: TypedExpress
         };
     }
 
-    const definition = expressions[op];
+    const definition = definitions[op];
     if (!definition) {
         return {
             key,
@@ -95,7 +99,7 @@ function parseExpression(expr: mixed, path: Array<number> = []) /*: TypedExpress
             error: `Expected at least 2 arguments, but found only ${expr.length - 1}.`
         };
 
-        const inputExpression = parseExpression(expr[1], path.concat(1));
+        const inputExpression = parseExpression(definitions, expr[1], path.concat(1));
         if (inputExpression.error) return inputExpression;
 
         // parse input/output pairs.
@@ -112,7 +116,7 @@ function parseExpression(expr: mixed, path: Array<number> = []) /*: TypedExpress
 
             const parsedInputGroup = [];
             for (let j = 0; j < inputGroup.length; j++) {
-                const parsedValue = parseExpression(inputGroup[j], path.concat(i, j));
+                const parsedValue = parseExpression(definitions, inputGroup[j], path.concat(i, j));
                 if (parsedValue.error) return parsedValue;
                 if (!parsedValue.literal) return {
                     key: `${key}.${i}.${j}`,
@@ -122,12 +126,12 @@ function parseExpression(expr: mixed, path: Array<number> = []) /*: TypedExpress
             }
             matchInputs.push(parsedInputGroup);
 
-            const output = parseExpression(expr[i + 1], path.concat(i));
+            const output = parseExpression(definitions, expr[i + 1], path.concat(i));
             if (output.error) return output;
             outputExpressions.push(output);
         }
 
-        const otherwise = parseExpression(expr[expr.length - 1], path.concat(expr.length - 1));
+        const otherwise = parseExpression(definitions, expr[expr.length - 1], path.concat(expr.length - 1));
         if (otherwise.error) return otherwise;
         outputExpressions.push(otherwise);
 
@@ -143,7 +147,7 @@ function parseExpression(expr: mixed, path: Array<number> = []) /*: TypedExpress
 
     const args = [];
     for (const arg of expr.slice(1)) {
-        const parsedArg = parseExpression(arg, path.concat(1 + args.length));
+        const parsedArg = parseExpression(definitions, arg, path.concat(1 + args.length));
         if (parsedArg.error) return parsedArg;
         args.push(parsedArg);
     }

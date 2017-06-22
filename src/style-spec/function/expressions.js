@@ -30,10 +30,10 @@ const {
 
  import type { ExpressionName } from './expression_name.js';
 
- type Definition = {
+ export type Definition = {
      name: ExpressionName,
      type: LambdaType,
-     compile: (expr: TypedLambdaExpression, args: Array<CompiledExpression>) => ({ js?: string, errors?: Array<string>, isFeatureConstant?: boolean, isZoomConstant?: boolean })
+     compile: (args: Array<CompiledExpression>, expr: TypedLambdaExpression) => ({ js?: string, errors?: Array<string>, isFeatureConstant?: boolean, isZoomConstant?: boolean })
  }
  */
 
@@ -44,27 +44,27 @@ const expressions: { [string]: Definition } = {
     'string': {
         name: 'string',
         type: lambda(StringType, ValueType),
-        compile: (_, args) => ({ js: `String(${args[0].js})` })
+        compile: args => ({ js: `String(${args[0].js})` })
     },
     'number': {
         name: 'string',
         type: lambda(NumberType, ValueType),
-        compile: (_, args) => ({js: `Number(${args[0].js})`})
+        compile: args => ({js: `Number(${args[0].js})`})
     },
     'boolean': {
         name: 'boolean',
         type: lambda(BooleanType, ValueType),
-        compile: (_, args) => ({js: `Boolean(${args[0].js})`})
+        compile: args => ({js: `Boolean(${args[0].js})`})
     },
     'json_array': {
         name: 'json_array',
         type: lambda(vector(ValueType), ValueType),
-        compile: (_, args) => ({js: `this.as(${args[0].js}, 'Vector<Value>')`})
+        compile: args => ({js: `this.as(${args[0].js}, 'Vector<Value>')`})
     },
     'object': {
         name: 'object',
         type: lambda(ObjectType, ValueType),
-        compile: (_, args) => ({js: `this.as(${args[0].js}, 'Object')`})
+        compile: args => ({js: `this.as(${args[0].js}, 'Object')`})
     },
     'color': {
         name: 'color',
@@ -74,22 +74,22 @@ const expressions: { [string]: Definition } = {
     'array': {
         name: 'array',
         type: lambda(anyArray(typename('T')), nargs(Infinity, typename('T'))),
-        compile: (e, args) => ({js: `this.array(${JSON.stringify(e.type.result.name)}, [${args.map(a => a.js).join(', ')}])`})
+        compile: (args, e) => ({js: `this.array(${JSON.stringify(e.type.result.name)}, [${args.map(a => a.js).join(', ')}])`})
     },
     'vector': {
         name: 'vector',
         type: lambda(vector(typename('T')), nargs(Infinity, typename('T'))),
-        compile: (e, args) => ({js: `this.vector(${JSON.stringify(e.type.result.name)}, [${args.map(a => a.js).join(', ')}])`})
+        compile: (args, e) => ({js: `this.vector(${JSON.stringify(e.type.result.name)}, [${args.map(a => a.js).join(', ')}])`})
     },
     'color_to_array': {
         name: 'color_to_array',
         type: lambda(array(NumberType, 4), ColorType),
-        compile: (_, args) => ({js: `this.array('Array<Number, 4>', ${args[0].js}.value)`})
+        compile: args => ({js: `this.array('Array<Number, 4>', ${args[0].js}.value)`})
     },
     'get': {
         name: 'get',
         type: lambda(ValueType, StringType, nargs(1, ObjectType)),
-        compile: (_, args) => ({
+        compile: args => ({
             js: `this.get(${args.length > 1 ? args[1].js : 'props'}, ${args[0].js}, ${args.length > 1 ? 'undefined' : '"feature.properties"'})`,
             isFeatureConstant: args.length > 1 && args[1].isFeatureConstant
         })
@@ -97,7 +97,7 @@ const expressions: { [string]: Definition } = {
     'has': {
         name: 'has',
         type: lambda(BooleanType, StringType, nargs(1, ObjectType)),
-        compile: (_, args) => ({
+        compile: args => ({
             js: `this.has(${args.length > 1 ? args[1].js : 'props'}, ${args[0].js}, ${args.length > 1 ? 'undefined' : '"feature.properties"'})`,
             isFeatureConstant: args.length > 1 && args[1].isFeatureConstant
         })
@@ -122,7 +122,7 @@ const expressions: { [string]: Definition } = {
             vector(typename('T')),
             StringType
         )),
-        compile: (e, args) => {
+        compile: args => {
             let t = args[0].type;
             if (t.kind === 'lambda') { t = t.result; }
             assert(t.kind === 'vector' || t.kind === 'primitive');
@@ -170,7 +170,7 @@ const expressions: { [string]: Definition } = {
     '^': {
         name: '^',
         type: lambda(NumberType, NumberType, NumberType),
-        compile: (_, args) => ({js: `Math.pow(${args[0].js}, ${args[1].js})`})
+        compile: args => ({js: `Math.pow(${args[0].js}, ${args[1].js})`})
     },
     'log10': defineMathFunction('log10', 1),
     'ln': defineMathFunction('ln', 1, 'log'),
@@ -192,22 +192,22 @@ const expressions: { [string]: Definition } = {
     '!': {
         name: '!',
         type: lambda(BooleanType, BooleanType),
-        compile: (_, args) => ({js: `!(${args[0].js})`})
+        compile: args => ({js: `!(${args[0].js})`})
     },
     'upcase': {
         name: 'upcase',
         type: lambda(StringType, StringType),
-        compile: (_, args) => ({js: `(${args[0].js}).toUpperCase()`})
+        compile: args => ({js: `(${args[0].js}).toUpperCase()`})
     },
     'downcase': {
         name: 'downcase',
         type: lambda(StringType, StringType),
-        compile: (_, args) => ({js: `(${args[0].js}).toLowerCase()`})
+        compile: args => ({js: `(${args[0].js}).toLowerCase()`})
     },
     'concat': {
         name: 'concat',
         type: lambda(StringType, nargs(Infinity, ValueType)),
-        compile: (_, args) => ({js: `[${args.map(a => a.js).join(', ')}].join('')`})
+        compile: args => ({js: `[${args.map(a => a.js).join(', ')}].join('')`})
     },
     'rgb': {
         name: 'rgb',
@@ -222,7 +222,7 @@ const expressions: { [string]: Definition } = {
     'case': {
         name: 'case',
         type: lambda(typename('T'), nargs(Infinity, BooleanType, typename('T')), typename('T')),
-        compile: (_, args) => {
+        compile: args => {
             args = [].concat(args);
             const result = [];
             while (args.length > 1) {
@@ -239,7 +239,7 @@ const expressions: { [string]: Definition } = {
         // note that, since they're pulled out during parsing, the input
         // values of type T aren't reflected in the signature here
         type: lambda(typename('T'), typename('U'), nargs(Infinity, typename('T'))),
-        compile: (e, args) => {
+        compile: (args, e) => {
             if (!e.matchInputs) { throw new Error('Missing match input values'); }
             const inputs = e.matchInputs;
             if (args.length !== inputs.length + 2) {
@@ -278,7 +278,7 @@ const expressions: { [string]: Definition } = {
     'coalesce': {
         name: 'coalesce',
         type: lambda(typename('T'), nargs(Infinity, typename('T'))),
-        compile: (_, args) => ({
+        compile: args => ({
             js: `this.coalesce(${args.map(a => `() => ${a.js}`).join(', ')})`
         })
     },
@@ -286,7 +286,7 @@ const expressions: { [string]: Definition } = {
     'curve': {
         name: 'curve',
         type: lambda(typename('T'), InterpolationType, NumberType, nargs(Infinity, NumberType, typename('T'))),
-        compile: (_, args) => {
+        compile: args => {
             const interpolation = args[0].expression;
             if (interpolation.literal) { throw new Error('Invalid interpolation type'); } // enforced by type checking
 
@@ -386,7 +386,7 @@ function defineMathFunction(name: ExpressionName, arity: number, mathName?: stri
     return {
         name: name,
         type: lambda(NumberType, ...args),
-        compile: (_, args) => ({ js: `Math.${key}(${args.map(a => a.js).join(', ')})` })
+        compile: args => ({ js: `Math.${key}(${args.map(a => a.js).join(', ')})` })
     };
 }
 
@@ -395,7 +395,7 @@ function defineBinaryMathOp(name, isAssociative) {
     return {
         name: name,
         type: lambda(NumberType, ...args),
-        compile: (_, args) => ({ js: `${args.map(a => a.js).join(name)}` })
+        compile: args => ({ js: `${args.map(a => a.js).join(name)}` })
     };
 }
 
@@ -405,7 +405,7 @@ function defineComparisonOp(name) {
     return {
         name: name,
         type: lambda(BooleanType, typename('T'), typename('T')),
-        compile: (_, args) => ({ js: `${args[0].js} ${op} ${args[1].js}` })
+        compile: args => ({ js: `${args[0].js} ${op} ${args[1].js}` })
     };
 }
 
@@ -413,12 +413,12 @@ function defineBooleanOp(op) {
     return {
         name: op,
         type: lambda(BooleanType, nargs(Infinity, BooleanType)),
-        compile: (_, args) => ({ js: `${args.map(a => a.js).join(op)}` })
+        compile: args => ({ js: `${args.map(a => a.js).join(op)}` })
     };
 }
 
 function fromContext(name) {
-    return (_, args) => {
+    return args => {
         const argvalues = args.map(a => a.js).join(', ');
         return { js: `this.${name}(${argvalues})` };
     };

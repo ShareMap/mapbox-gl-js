@@ -17,6 +17,8 @@ const evaluationContext = require('./evaluation_context');
 
  import type { ExpressionName } from './expression_name.js';
 
+ import type { Definition } from './expressions.js';
+
  export type CompiledExpression = {|
      result: 'success',
      js: string,
@@ -62,8 +64,12 @@ const evaluationContext = require('./evaluation_context');
  *
  * @private
  */
-function compileExpression(expr: mixed, expectedType?: Type) {
-    const parsed = parseExpression(expr);
+function compileExpression(
+    definitions: {[string]: Definition},
+    expr: mixed,
+    expectedType?: Type
+) {
+    const parsed = parseExpression(definitions, expr);
     if (parsed.error) {
         return {
             result: 'error',
@@ -134,7 +140,7 @@ function compile(expected: Type | null, e: TypedExpression) /*: CompiledExpressi
         let isZoomConstant = compiledArgs.reduce((memo, arg) => memo && arg.isZoomConstant, true);
 
         const definition = expressions[e.name];
-        const compiled = definition.compile(e, compiledArgs);
+        const compiled = definition.compile(compiledArgs, e);
         if (compiled.errors) {
             return {
                 result: 'error',

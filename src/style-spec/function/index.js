@@ -1,4 +1,5 @@
 
+const expressions = require('./expressions');
 const compileExpression = require('./compile');
 const convert = require('./convert');
 const {ColorType, StringType, NumberType, ValueType, array, vector} = require('./types');
@@ -19,7 +20,7 @@ function createFunction(parameters, propertySpec) {
     }
 
     const expectedType = getExpectedType(propertySpec);
-    const compiled = compileExpression(expr, expectedType);
+    const compiled = compileExpression(expressions, expr, expectedType);
     if (compiled.result === 'success') {
         const f = function (zoom, properties) {
             const val = compiled.function({zoom}, {properties});
