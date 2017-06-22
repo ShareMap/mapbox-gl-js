@@ -163,7 +163,7 @@ function convertZoomFunction(parameters, propertySpec) {
         const base = parameters.base !== undefined ? parameters.base : 1;
         expression = ['curve', ['exponential', base], ['zoom']];
     } else {
-        throw new Error(`Unknown zoom function type ${type}`);
+        throw new Error(`Unknown zoom function type "${type}"`);
     }
 
     for (const stop of parameters.stops) {
