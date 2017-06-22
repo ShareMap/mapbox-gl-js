@@ -1,6 +1,16 @@
 {
   "expression": [
-    "zoom"
+    "curve",
+    [
+      "linear"
+    ],
+    [
+      "zoom"
+    ],
+    0,
+    0,
+    30,
+    30
   ],
   "evaluate": [
     [

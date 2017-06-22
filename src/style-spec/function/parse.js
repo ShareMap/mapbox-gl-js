@@ -38,7 +38,8 @@ module.exports = parseExpression;
 function parseExpression(
     definitions: {[string]: Definition},
     expr: mixed,
-    path: Array<number> = []
+    path: Array<number> = [],
+    ancestorNames: Array<string> = []
 ) /*: TypedExpression | ParseError */ {
     const key = path.join('.');
     if (expr === null || typeof expr === 'undefined') return {
@@ -92,6 +93,23 @@ function parseExpression(
         };
     }
 
+    // special case validation for `zoom`
+    if (op === 'zoom') {
+        const ancestors = ancestorNames.join(':');
+        // zoom expressions may only appear like:
+        // ['curve', interp, ['zoom'], ...]
+        // or ['coalesce', ['curve', interp, ['zoom'], ...], ... ]
+        if (
+            !/^(1.)?2/.test(key) ||
+            !/(coalesce:)?curve/.test(ancestors)
+        ) {
+            return {
+                key,
+                error: 'The "zoom" expression may only be used as the input to a top-level "curve" expression.'
+            };
+        }
+    }
+
     // special case parsing for `match`
     if (op === 'match') {
         if (expr.length < 3) return {
@@ -99,7 +117,7 @@ function parseExpression(
             error: `Expected at least 2 arguments, but found only ${expr.length - 1}.`
         };
 
-        const inputExpression = parseExpression(definitions, expr[1], path.concat(1));
+        const inputExpression = parseExpression(definitions, expr[1], path.concat(1), ancestorNames.concat(op));
         if (inputExpression.error) return inputExpression;
 
         // parse input/output pairs.
@@ -116,7 +134,7 @@ function parseExpression(
 
             const parsedInputGroup = [];
             for (let j = 0; j < inputGroup.length; j++) {
-                const parsedValue = parseExpression(definitions, inputGroup[j], path.concat(i, j));
+                const parsedValue = parseExpression(definitions, inputGroup[j], path.concat(i, j), ancestorNames.concat(op));
                 if (parsedValue.error) return parsedValue;
                 if (!parsedValue.literal) return {
                     key: `${key}.${i}.${j}`,
@@ -126,12 +144,12 @@ function parseExpression(
             }
             matchInputs.push(parsedInputGroup);
 
-            const output = parseExpression(definitions, expr[i + 1], path.concat(i));
+            const output = parseExpression(definitions, expr[i + 1], path.concat(i), ancestorNames.concat(op));
             if (output.error) return output;
             outputExpressions.push(output);
         }
 
-        const otherwise = parseExpression(definitions, expr[expr.length - 1], path.concat(expr.length - 1));
+        const otherwise = parseExpression(definitions, expr[expr.length - 1], path.concat(expr.length - 1), ancestorNames.concat(op));
         if (otherwise.error) return otherwise;
         outputExpressions.push(otherwise);
 
@@ -147,7 +165,7 @@ function parseExpression(
 
     const args = [];
     for (const arg of expr.slice(1)) {
-        const parsedArg = parseExpression(definitions, arg, path.concat(1 + args.length));
+        const parsedArg = parseExpression(definitions, arg, path.concat(1 + args.length), ancestorNames.concat(op));
         if (parsedArg.error) return parsedArg;
         args.push(parsedArg);
     }

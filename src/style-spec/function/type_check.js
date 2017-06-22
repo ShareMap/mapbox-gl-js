@@ -37,6 +37,7 @@ const util = require('../../util/util');
 const { NullType, lambda, array, anyArray, vector, variant, nargs } = require('./types');
 
 module.exports = typeCheckExpression;
+module.exports.serialize = serializeExpression;
 
 // typecheck the given expression and return a new TypedExpression
 // tree with all generics resolved

@@ -1,4 +1,5 @@
 
+const assert = require('assert');
 const expressions = require('./expressions');
 const compileExpression = require('./compile');
 const convert = require('./convert');
@@ -28,6 +29,34 @@ function createFunction(parameters, propertySpec) {
         };
         f.isFeatureConstant = compiled.isFeatureConstant;
         f.isZoomConstant = compiled.isZoomConstant;
+        if (!f.isZoomConstant) {
+            // capture metadata from the curve definition that's needed for
+            // our prepopulate-and-interpolate approach to paint properties
+            // that are zoom-and-property dependent.
+            let curve = compiled.expression;
+            if (curve.name !== 'curve') { curve = curve.arguments[0]; }
+            const curveArgs = [].concat(curve.arguments);
+            const interpolation = serialize(curveArgs.shift());
+
+            f.zoomStops = [];
+            for (let i = 1; i < curveArgs.length; i += 2) {
+                f.zoomStops.push(curveArgs[i].value);
+            }
+
+            if (!f.isFeatureConstant) {
+                const interpExpression = ['curve', interpolation, ['zoom']];
+                for (let i = 0; i < f.zoomStops.length; i++) {
+                    interpExpression.push(f.zoomStops[i], i);
+                }
+                const interpFunction = compileExpression(
+                    expressions,
+                    ['coalesce', interpExpression, 0],
+                    NumberType
+                );
+                assert(!interpFunction.errors);
+                f.interpolationT = interpFunction.function;
+            }
+        }
         return f;
     } else {
         console.log(expr)
