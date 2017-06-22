@@ -62,7 +62,7 @@ const evaluationContext = require('./evaluation_context');
  *
  * @private
  */
-function compileExpression(expr: mixed) {
+function compileExpression(expr: mixed, expectedType?: Type) {
     const parsed = parseExpression(expr);
     if (parsed.error) {
         return {
@@ -72,7 +72,7 @@ function compileExpression(expr: mixed) {
     }
 
     if (parsed.type) {
-        const typecheckResult = typecheck(parsed.type, parsed);
+        const typecheckResult = typecheck(expectedType || parsed.type, parsed);
         if (typecheckResult.errors) {
             return { result: 'error', errors: typecheckResult.errors };
         }
@@ -81,9 +81,16 @@ function compileExpression(expr: mixed) {
         if (compiled.result === 'success') {
             const fn = new Function('mapProperties', 'feature', `
     mapProperties = mapProperties || {};
-    feature = feature || {};
-    var props = feature.properties || {};
-    return (${compiled.js})
+    if (feature && typeof feature === 'object') {
+        feature = this.object(feature);
+    }
+    var props;
+    if (feature && feature.type === 'Object') {
+        props = (typeof feature.value.properties === 'object') ?
+            this.object(feature.value.properties) : feature.value.properties;
+    }
+    if (!props) { props = this.object({}); }
+    return this.unwrap(${compiled.js})
     `);
             compiled.function = fn.bind(evaluationContext());
         }

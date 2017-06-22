@@ -24,7 +24,9 @@
       "type": "string"
     },
     "evaluateResults": [
-      {"error":"ExpressionEvaluationError: Cannot get property type from null object feature.geometry."},
+      {
+        "error": "ExpressionEvaluationError: Property 'geometry' not found in feature"
+      },
       "LineString"
     ]
   }

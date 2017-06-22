@@ -43,25 +43,21 @@
       "type": "color"
     },
     "evaluateResults": [
-      {
-        "value": [
-          1,
-          0,
-          0,
-          1
-        ]
-      },
+      [
+        1,
+        0,
+        0,
+        1
+      ],
       {
         "error": "ExpressionEvaluationError: Could not parse color from value 'invalid'"
       },
-      {
-        "value": [
-          0,
-          1,
-          0,
-          1
-        ]
-      }
+      [
+        0,
+        1,
+        0,
+        1
+      ]
     ]
   }
 }

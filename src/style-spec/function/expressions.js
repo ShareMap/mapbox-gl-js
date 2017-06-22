@@ -145,7 +145,7 @@ const expressions: { [string]: Definition } = {
         name: 'geometry_type',
         type: lambda(StringType),
         compile: () => ({
-            js: 'this.get(feature.geometry, "type", "feature.geometry")',
+            js: 'this.get(this.get(feature, "geometry", "feature"), "type", "feature.geometry")',
             isFeatureConstant: false
         })
     },
@@ -295,6 +295,11 @@ const expressions: { [string]: Definition } = {
                 resultType = 'number';
             } else if (args[3].type === ColorType) {
                 resultType = 'color';
+            } else if (
+                args[3].type.kind === 'array' &&
+                args[3].type.itemType === NumberType
+            ) {
+                resultType = 'array';
             } else if (interpolation.name !== 'step') {
                 return {
                     errors: [`Type ${args[3].type.name} is not interpolatable, and thus cannot be used as a ${interpolation.name} curve's output type.`]
@@ -312,7 +317,7 @@ const expressions: { [string]: Definition } = {
                     };
                 }
 
-                if (stops.length && stops[stops.length - 1] >= input.value) {
+                if (stops.length && stops[stops.length - 1] > input.value) {
                     return {
                         errors: [ 'Input/output pairs for "curve" expressions must be arranged with input values in strictly ascending order.' ]
                     };
@@ -321,8 +326,6 @@ const expressions: { [string]: Definition } = {
                 stops.push(input.value);
                 outputs.push(output.js);
             }
-
-            if (stops.length === 1) return {js: `${outputs[0]}`};
 
             const interpolationOptions: Object = {
                 name: interpolation.name

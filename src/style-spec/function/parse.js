@@ -37,7 +37,7 @@ module.exports = parseExpression;
  */
 function parseExpression(expr: mixed, path: Array<number> = []) /*: TypedExpression | ParseError */ {
     const key = path.join('.');
-    if (typeof expr === 'undefined') return {
+    if (expr === null || typeof expr === 'undefined') return {
         literal: true,
         value: null,
         type: NullType,
