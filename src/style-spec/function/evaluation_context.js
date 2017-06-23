@@ -16,22 +16,24 @@ class RuntimeError extends Error {
     }
 }
 
-function assert(condition, message) {
+// don't call this 'assert' because build/min.test.js checks for 'assert('
+// in the bundled code to verify that unassertify is working.
+function ensure(condition, message) {
     if (!condition) throw new RuntimeError(message);
     return true;
 }
 
 module.exports = () => ({
-    assert: assert,
-    error: (msg) => assert(false, msg),
+    ensure: ensure,
+    error: (msg) => ensure(false, msg),
 
     at: function (index, arrayOrVector) {
-        assert(index < arrayOrVector.items.length, `${arrayOrVector.type} index out of bounds: ${index} > ${arrayOrVector.items.length}.`);
+        ensure(index < arrayOrVector.items.length, `${arrayOrVector.type} index out of bounds: ${index} > ${arrayOrVector.items.length}.`);
         return arrayOrVector.items[index];
     },
 
     get: function (obj, key, name) {
-        assert(this.has(obj, key, name), `Property '${key}' not found in ${name || `object with keys: [${Object.keys(obj)}]`}`);
+        ensure(this.has(obj, key, name), `Property '${key}' not found in ${name || `object with keys: [${Object.keys(obj)}]`}`);
         const val = obj.value[key];
 
         if (Array.isArray(val)) return this.vector('Vector<Value>', val);
@@ -40,7 +42,7 @@ module.exports = () => ({
     },
 
     has: function (obj, key, name) {
-        assert(obj, `Cannot get property ${key} from null object${name ? ` ${name}` : ''}.`);
+        ensure(obj, `Cannot get property ${key} from null object${name ? ` ${name}` : ''}.`);
         return this.as(obj, 'Object', name).value.hasOwnProperty(key);
     },
 
@@ -52,7 +54,7 @@ module.exports = () => ({
 
     as: function (value, expectedType, name) {
         const type = this.typeOf(value);
-        assert(type === expectedType, `Expected ${name || 'value'} to be of type ${expectedType}, but found ${type} instead.`);
+        ensure(type === expectedType, `Expected ${name || 'value'} to be of type ${expectedType}, but found ${type} instead.`);
         return value;
     },
 
@@ -73,7 +75,7 @@ module.exports = () => ({
             type: 'Color',
             value: parseColor(input)
         };
-        assert(typeof c.value !== 'undefined', `Could not parse color from value '${input}'`);
+        ensure(typeof c.value !== 'undefined', `Could not parse color from value '${input}'`);
         return c;
     },
 
