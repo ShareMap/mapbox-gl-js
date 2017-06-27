@@ -72,7 +72,6 @@ const ValueType = variant(
     NumberType,
     StringType,
     BooleanType,
-    ColorType,
     ObjectType,
     (Value: Type) => array(Value)
 );

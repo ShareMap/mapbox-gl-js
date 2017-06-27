@@ -17,7 +17,7 @@
       "result": "success",
       "isFeatureConstant": true,
       "isZoomConstant": true,
-      "type": "Array<Variant<Null | Number | String | Boolean | Color | Object | Array<(recursive_wrapper)>>, 2>"
+      "type": "Array<Variant<Null | Number | String | Boolean | Object | Array<(recursive_wrapper)>>, 2>"
     },
     "evaluateResults": [
       [
