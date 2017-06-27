@@ -2,7 +2,7 @@
   "expression": [
     "length",
     [
-      "json_array",
+      "array",
       [
         "get",
         "x"

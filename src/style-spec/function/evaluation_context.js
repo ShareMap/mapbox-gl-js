@@ -36,7 +36,7 @@ module.exports = () => ({
         ensure(this.has(obj, key, name), `Property '${key}' not found in ${name || `object with keys: [${Object.keys(obj)}]`}`);
         const val = obj.value[key];
 
-        if (Array.isArray(val)) return this.vector('Vector<Value>', val);
+        if (Array.isArray(val)) return this.array('Array<Value>', val);
         if (val && typeof val === 'object') return this.object(val);
         return val;
     },
@@ -80,10 +80,6 @@ module.exports = () => ({
     },
 
     array: function(type, items) {
-        return {type, items};
-    },
-
-    vector: function(type, items) {
         return {type, items};
     },
 

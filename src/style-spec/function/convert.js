@@ -68,10 +68,8 @@ function convertValue(value, spec) {
     if (typeof value === 'undefined') return null;
     if (spec.type === 'color') {
         return ['color', value];
-    } else if (spec.type === 'array' && typeof spec.length === 'number') {
-        return ['array'].concat(value);
     } else if (spec.type === 'array') {
-        return ['vector'].concat(value);
+        return ['array'].concat(value);
     } else {
         return value;
     }

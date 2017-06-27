@@ -68,7 +68,7 @@
       "String",
       "Number",
       "Boolean",
-      "Vector<Value>",
+      "Array<Value>",
       "Object"
     ]
   }

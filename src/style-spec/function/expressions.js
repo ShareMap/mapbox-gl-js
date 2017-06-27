@@ -14,15 +14,13 @@ const {
     InterpolationType,
     typename,
     variant,
-    vector,
     array,
-    anyArray,
     lambda,
     nargs
 } = require('./types');
 
 /*::
- import type { PrimitiveType, TypeName, VariantType, VectorType, ArrayType, AnyArrayType, NArgs, LambdaType, Type } from './types.js';
+ import type { PrimitiveType, TypeName, VariantType, ArrayType, NArgs, LambdaType, Type } from './types.js';
 
  import type { TypeError, TypedLambdaExpression, TypedLiteralExpression, TypedExpression } from './type_check.js';
 
@@ -56,10 +54,10 @@ const expressions: { [string]: Definition } = {
         type: lambda(BooleanType, ValueType),
         compile: args => ({js: `Boolean(${args[0].js})`})
     },
-    'json_array': {
-        name: 'json_array',
-        type: lambda(vector(ValueType), ValueType),
-        compile: args => ({js: `this.as(${args[0].js}, 'Vector<Value>')`})
+    'array': {
+        name: 'array',
+        type: lambda(array(typename('T')), nargs(Infinity, typename('T'))),
+        compile: (args, e) => ({js: `this.array(${JSON.stringify(e.type.result.name)}, [${args.map(a => a.js).join(', ')}])`})
     },
     'object': {
         name: 'object',
@@ -70,16 +68,6 @@ const expressions: { [string]: Definition } = {
         name: 'color',
         type: lambda(ColorType, StringType),
         compile: fromContext('color')
-    },
-    'array': {
-        name: 'array',
-        type: lambda(anyArray(typename('T')), nargs(Infinity, typename('T'))),
-        compile: (args, e) => ({js: `this.array(${JSON.stringify(e.type.result.name)}, [${args.map(a => a.js).join(', ')}])`})
-    },
-    'vector': {
-        name: 'vector',
-        type: lambda(vector(typename('T')), nargs(Infinity, typename('T'))),
-        compile: (args, e) => ({js: `this.vector(${JSON.stringify(e.type.result.name)}, [${args.map(a => a.js).join(', ')}])`})
     },
     'color_to_array': {
         name: 'color_to_array',
@@ -107,7 +95,7 @@ const expressions: { [string]: Definition } = {
         type: lambda(
             typename('T'),
             NumberType,
-            variant(vector(typename('T')), anyArray(typename('T')))
+            array(typename('T'))
         ),
         compile: fromContext('at')
     },
@@ -119,15 +107,15 @@ const expressions: { [string]: Definition } = {
     'length': {
         name: 'length',
         type: lambda(NumberType, variant(
-            vector(typename('T')),
+            array(typename('T')),
             StringType
         )),
         compile: args => {
             let t = args[0].type;
             if (t.kind === 'lambda') { t = t.result; }
-            assert(t.kind === 'vector' || t.kind === 'primitive');
+            assert(t.kind === 'array' || t.kind === 'primitive');
             return {
-                js: t.kind === 'vector' ?
+                js: t.kind === 'array' ?
                     `${args[0].js}.items.length` :
                     `${args[0].js}.length`
             };

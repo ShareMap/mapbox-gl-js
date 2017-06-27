@@ -2,7 +2,7 @@
 // @flow
 
 /*::
- import type { PrimitiveType, TypeName, VariantType, VectorType, ArrayType, AnyArrayType, NArgs, LambdaType, Type } from './types.js';
+ import type { PrimitiveType, TypeName, VariantType, ArrayType, NArgs, LambdaType, Type } from './types.js';
 
  import type { ExpressionName } from './expression_name.js';
 
@@ -34,7 +34,7 @@
 const assert = require('assert');
 const util = require('../../util/util');
 
-const { NullType, lambda, array, anyArray, vector, variant, nargs } = require('./types');
+const { NullType, lambda, array, variant, nargs } = require('./types');
 
 module.exports = typeCheckExpression;
 module.exports.serialize = serializeExpression;
@@ -201,23 +201,13 @@ function match(expected: Type, t: Type, expectedTypenames: { [string]: Type } = 
     if (expected.kind === 'primitive') {
         if (t === expected) return null;
         else return errorMessage;
-    } else if (expected.kind === 'vector') {
-        if (t.kind === 'vector') {
-            const error = match(expected.itemType, t.itemType, expectedTypenames, tTypenames);
-            if (error) return `${errorMessage}. (${error})`;
-            else return null;
-        } else {
-            return errorMessage;
-        }
-    } else if (expected.kind === 'any_array' || expected.kind === 'array') {
+    } else if (expected.kind === 'array') {
         if (t.kind === 'array') {
             const error = match(expected.itemType, t.itemType, expectedTypenames, tTypenames);
             if (error) return `${errorMessage}. (${error})`;
-            else if (expected.kind === 'array' && expected.N !== t.N) return errorMessage;
+            else if (typeof expected.N === 'number' && expected.N !== t.N) return errorMessage;
             else return null;
         } else {
-            // technically we should check if t is a variant all of whose
-            // members are Arrays, but it's probably not necessary in practice.
             return errorMessage;
         }
     } else if (expected.kind === 'variant') {
@@ -259,7 +249,7 @@ function isGeneric (type, stack = []) {
     if (stack.indexOf(type) >= 0) { return false; }
     if (type.kind === 'typename') {
         return true;
-    } else if (type.kind === 'vector' || type.kind === 'array' || type.kind === 'any_array') {
+    } else if (type.kind === 'array') {
         return isGeneric(type.itemType, stack.concat(type));
     } else if (type.kind === 'variant') {
         return type.members.some((t) => isGeneric(t, stack.concat(type)));
@@ -278,9 +268,7 @@ function resolveTypenamesIfPossible(type: Type, typenames: {[string]: Type}, sta
     if (type.kind === 'typename') return typenames[type.typename] || type;
 
     const resolve = (t) => resolveTypenamesIfPossible(t, typenames, stack.concat(type));
-    if (type.kind === 'vector') return vector(resolve(type.itemType, typenames));
     if (type.kind === 'array') return array(resolve(type.itemType, typenames), type.N);
-    if (type.kind === 'any_array') return anyArray(resolve(type.itemType));
     if (type.kind === 'variant') return variant(...type.members.map(resolve));
     if (type.kind === 'nargs') return nargs(type.N, ...type.types.map(resolve));
     if (type.kind === 'lambda') return lambda(resolve(type.result), ...type.params.map(resolve));

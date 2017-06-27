@@ -11,7 +11,7 @@ const typecheck = require('./type_check');
 const evaluationContext = require('./evaluation_context');
 
 /*::
- import type { PrimitiveType, TypeName, VariantType, VectorType, ArrayType, AnyArrayType, NArgs, LambdaType, Type } from './types.js';
+ import type { PrimitiveType, TypeName, VariantType, ArrayType, NArgs, LambdaType, Type } from './types.js';
 
  import type { TypeError, TypedLambdaExpression, TypedLiteralExpression, TypedExpression } from './type_check.js';
 

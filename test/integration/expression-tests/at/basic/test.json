@@ -5,7 +5,7 @@
       "at",
       1,
       [
-        "json_array",
+        "array",
         [
           "get",
           "arr"

@@ -5,12 +5,10 @@
  export type PrimitiveType = { kind: 'primitive', name: string }
  export type TypeName = { kind: 'typename', name: string, typename: string }
  export type VariantType = { kind: 'variant', name: string, members: Array<Type> }
- export type VectorType = { kind: 'vector', name: string, itemType: Type }
- export type ArrayType = { kind: 'array', name: string, itemType: Type, N: number }
- export type AnyArrayType = { kind: 'any_array', name: string, itemType: Type }
+ export type ArrayType = { kind: 'array', name: string, itemType: Type, N: ?number }
  export type NArgs = { kind: 'nargs', name: string, types: Array<Type>, N: number }
  export type LambdaType = { kind: 'lambda', name: string, result: Type, params: Array<Type> }
- export type Type = PrimitiveType | TypeName | VariantType | VectorType | ArrayType | AnyArrayType | NArgs | LambdaType
+ export type Type = PrimitiveType | TypeName | VariantType | ArrayType | NArgs | LambdaType
 */
 
 function primitive(name) /*: PrimitiveType */ {
@@ -35,30 +33,12 @@ function variant(...types: Array<Type | (Type)=>Type>) /*: VariantType */ {
     return v;
 }
 
-function vector(itemType: Type) /*: VectorType */ {
-    return {
-        kind: 'vector',
-        name: `Vector<${itemType.name}>`,
-        itemType
-    };
-}
-
-function array(itemType: Type, N: number) /*: ArrayType */ {
+function array(itemType: Type, N: ?number) /*: ArrayType */ {
     return {
         kind: 'array',
-        name: `Array<${itemType.name}, ${N}>`,
+        name: typeof N === 'number' ? `Array<${itemType.name}, ${N}>` : `Array<${itemType.name}>`,
         itemType,
         N
-    };
-}
-
-// Used to match an argument that must be an array of some (unspecified)
-// length.
-function anyArray(itemType: Type) /*: AnyArrayType */ {
-    return {
-        kind: 'any_array',
-        name: `Array<${itemType.name}, N>`,
-        itemType
     };
 }
 
@@ -94,7 +74,7 @@ const ValueType = variant(
     BooleanType,
     ColorType,
     ObjectType,
-    (Value: Type) => vector(Value)
+    (Value: Type) => array(Value)
 );
 
 const InterpolationType = primitive('interpolation_type');
@@ -110,9 +90,7 @@ module.exports = {
     InterpolationType,
     typename,
     variant,
-    vector,
     array,
-    anyArray,
     lambda,
     nargs
 };
