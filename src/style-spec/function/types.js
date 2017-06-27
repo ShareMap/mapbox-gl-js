@@ -28,7 +28,7 @@ function variant(...types: Array<Type | (Type)=>Type>) /*: VariantType */ {
         name: '(recursive_wrapper)'
     };
     v.members = types.map(t => typeof t === 'function' ? t(v) : t);
-    v.name = `Variant<${v.members.map(t => t.name).join(' | ')}>`;
+    v.name = v.members.map(t => t.name).join(' | ');
     v.toJSON = function () { return this.name; };
     return v;
 }
