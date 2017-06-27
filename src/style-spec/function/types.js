@@ -28,7 +28,8 @@ const ValueType = variant(
 
 const ValueArray = array(ValueType);
 ValueType.members.push(ValueArray);
-ValueType.name += ` | ${ValueArray.name}`;
+ValueType.name = 'Value';
+
 
 const InterpolationType = primitive('interpolation_type');
 

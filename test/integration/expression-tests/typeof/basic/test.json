@@ -68,7 +68,7 @@
       "String",
       "Number",
       "Boolean",
-      "Array<Value>",
+      "Array",
       "Object"
     ]
   }

@@ -36,7 +36,7 @@ module.exports = () => ({
         ensure(this.has(obj, key, name), `Property '${key}' not found in ${name || `object with keys: [${Object.keys(obj)}]`}`);
         const val = obj.value[key];
 
-        if (Array.isArray(val)) return this.array('Array<Value>', val);
+        if (Array.isArray(val)) return this.array('Array', val);
         if (val && typeof val === 'object') return this.object(val);
         return val;
     },
@@ -122,7 +122,7 @@ module.exports = () => ({
 
         const type = maybeWrapped.type;
         if (type === 'Color' || type === 'Object') return maybeWrapped.value;
-        else if (/Array<|Vector</.test(type)) return maybeWrapped.items;
+        else if (/^Array/.test(type)) return maybeWrapped.items;
 
         // this shouldn't happen; if it does, it's a bug rather than a runtime
         // expression evaluation error

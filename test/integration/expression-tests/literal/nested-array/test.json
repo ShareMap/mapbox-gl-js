@@ -20,7 +20,7 @@
       "result": "success",
       "isFeatureConstant": true,
       "isZoomConstant": true,
-      "type": "Array<Null | Number | String | Boolean | Object | Array, 2>"
+      "type": "Array<Value, 2>"
     },
     "evaluateResults": [
       [
