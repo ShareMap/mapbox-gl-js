@@ -27,9 +27,9 @@ module.exports = () => ({
     ensure: ensure,
     error: (msg) => ensure(false, msg),
 
-    at: function (index, arrayOrVector) {
-        ensure(index < arrayOrVector.items.length, `${arrayOrVector.type} index out of bounds: ${index} > ${arrayOrVector.items.length}.`);
-        return arrayOrVector.items[index];
+    at: function (index, array) {
+        ensure(index < array.items.length, `${array.type} index out of bounds: ${index} > ${array.items.length}.`);
+        return array.items[index];
     },
 
     get: function (obj, key, name) {

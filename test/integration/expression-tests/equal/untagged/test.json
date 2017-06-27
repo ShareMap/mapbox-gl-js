@@ -19,7 +19,7 @@
       "errors": [
         {
           "key": "2",
-          "error": "Expected String but found Null | Number | String | Boolean | Object | Array<(recursive_wrapper)> instead."
+          "error": "Expected String but found Null | Number | String | Boolean | Object | Array instead."
         }
       ]
     }

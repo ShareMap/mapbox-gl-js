@@ -11,6 +11,27 @@
  export type Type = PrimitiveType | TypeName | VariantType | ArrayType | NArgs | LambdaType
 */
 
+const NullType = primitive('Null');
+const NumberType = primitive('Number');
+const StringType = primitive('String');
+const BooleanType = primitive('Boolean');
+const ColorType = primitive('Color');
+const ObjectType = primitive('Object');
+
+const ValueType = variant(
+    NullType,
+    NumberType,
+    StringType,
+    BooleanType,
+    ObjectType
+);
+
+const ValueArray = array(ValueType);
+ValueType.members.push(ValueArray);
+ValueType.name += ` | ${ValueArray.name}`;
+
+const InterpolationType = primitive('interpolation_type');
+
 function primitive(name) /*: PrimitiveType */ {
     return { kind: 'primitive', name };
 }
@@ -19,24 +40,19 @@ function typename(tn: string)/*: TypeName */ {
     return { kind: 'typename', name: `typename ${tn}`, typename: tn };
 }
 
-// each 'types' argument may be either an object of type Type or a function
-// accepting 'this' variant and returning a Type (the latter allowing
-// recursive variant definitions)
-function variant(...types: Array<Type | (Type)=>Type>) /*: VariantType */ {
-    const v: Object = {
+function variant(...types: Array<Type>) /*: VariantType */ {
+    return {
         kind: 'variant',
-        name: '(recursive_wrapper)'
+        members: types,
+        name: types.map(t => t.name).join(' | ')
     };
-    v.members = types.map(t => typeof t === 'function' ? t(v) : t);
-    v.name = v.members.map(t => t.name).join(' | ');
-    v.toJSON = function () { return this.name; };
-    return v;
 }
 
 function array(itemType: Type, N: ?number) /*: ArrayType */ {
     return {
         kind: 'array',
-        name: typeof N === 'number' ? `Array<${itemType.name}, ${N}>` : `Array<${itemType.name}>`,
+        name: typeof N === 'number' ? `Array<${itemType.name}, ${N}>` :
+            itemType === ValueType ? 'Array' : `Array<${itemType.name}>`,
         itemType,
         N
     };
@@ -59,24 +75,6 @@ function lambda(result: Type, ...params: Array<Type>) /*: LambdaType */ {
         params
     };
 }
-
-const NullType = primitive('Null');
-const NumberType = primitive('Number');
-const StringType = primitive('String');
-const BooleanType = primitive('Boolean');
-const ColorType = primitive('Color');
-const ObjectType = primitive('Object');
-
-const ValueType = variant(
-    NullType,
-    NumberType,
-    StringType,
-    BooleanType,
-    ObjectType,
-    (Value: Type) => array(Value)
-);
-
-const InterpolationType = primitive('interpolation_type');
 
 module.exports = {
     NullType,

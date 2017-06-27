@@ -21,7 +21,7 @@
       "result": "success",
       "isFeatureConstant": true,
       "isZoomConstant": true,
-      "type": "Array<Null | Number | String | Boolean | Object | Array<(recursive_wrapper)>>"
+      "type": "Array"
     },
     "evaluateResults": [
       [
