@@ -151,7 +151,7 @@ Every expression evaluates to a value of one of the following types.
   * `["step"]` - equivalent to existing "interval" function behavior.
   * `["exponential", base]` - `base` is a number > 0; equivalent to existing "exponential" function behavior. `T` must be `Number` or `Color`
   * `["linear"]` - equivalent to `["exponential", 1]`
-  * `["cubic-bezier", x1, y1, x2, y2]` - define your own interpolation. `T` must be `Number`
+  * `["cubic_bezier", x1, y1, x2, y2]` - define your own interpolation. `T` must be `Number`
 
 ###Math:
 All of the following take `Number` inputs and produce a `Number`.
