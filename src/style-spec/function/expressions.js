@@ -20,9 +20,9 @@ const {
 } = require('./types');
 
 /*::
- import type { PrimitiveType, TypeName, VariantType, ArrayType, NArgs, LambdaType, Type } from './types.js';
+ import type { LambdaType } from './types.js';
 
- import type { TypeError, TypedLambdaExpression, TypedLiteralExpression, TypedExpression } from './type_check.js';
+ import type { TypedLambdaExpression } from './type_check.js';
 
  import type { CompiledExpression } from './compile.js';
 
