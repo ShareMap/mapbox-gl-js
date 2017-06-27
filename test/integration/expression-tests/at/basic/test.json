@@ -32,7 +32,7 @@
       "result": "success",
       "isFeatureConstant": false,
       "isZoomConstant": true,
-      "type": "number"
+      "type": "Number"
     },
     "evaluateResults": [
       8

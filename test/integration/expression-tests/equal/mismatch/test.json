@@ -22,7 +22,7 @@
       "errors": [
         {
           "key": "2",
-          "error": "Expected string but found number instead."
+          "error": "Expected String but found Number instead."
         }
       ]
     }

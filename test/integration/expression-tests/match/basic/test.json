@@ -48,7 +48,7 @@
       "result": "success",
       "isFeatureConstant": false,
       "isZoomConstant": true,
-      "type": "string"
+      "type": "String"
     },
     "evaluateResults": [
       "Apple",

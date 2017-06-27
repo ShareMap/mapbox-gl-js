@@ -7,9 +7,8 @@ const {
     NumberType,
     StringType,
     BooleanType,
-    lambda,
-    typename,
-    nargs,
+    ValueType,
+    ObjectType,
     array
 } = require('./types');
 
@@ -27,6 +26,12 @@ const {
 */
 
 module.exports = parseExpression;
+
+const primitiveTypes = {
+    string: StringType,
+    number: NumberType,
+    boolean: BooleanType
+};
 
 /**
  * Parse raw JSON expression into a TypedExpression structure, with type
@@ -49,24 +54,10 @@ function parseExpression(
         key
     };
 
-    if (typeof expr === 'string') return {
+    if (primitiveTypes[typeof expr]) return {
         literal: true,
         value: expr,
-        type: StringType,
-        key
-    };
-
-    if (typeof expr === 'number') return {
-        literal: true,
-        value: expr,
-        type: NumberType,
-        key
-    };
-
-    if (typeof expr === 'boolean') return {
-        literal: true,
-        value: expr,
-        type: BooleanType,
+        type: primitiveTypes[typeof expr],
         key
     };
 
@@ -74,6 +65,45 @@ function parseExpression(
         return {
             key,
             error: `Expected an array, but found ${typeof expr} instead.`
+        };
+    }
+
+    if (expr[0] === 'literal') {
+        if (expr.length !== 2) return {
+            key,
+            error: `'literal' expression requires exactly one argument, but found ${expr.length - 1} instead.`
+        };
+
+        const rawValue = expr[1];
+        let type;
+        let value;
+        if (Array.isArray(rawValue)) {
+            let itemType;
+            // infer the array's item type
+            for (const item of rawValue) {
+                const t = primitiveTypes[typeof item];
+                if (t && !itemType) {
+                    itemType = t;
+                } else if (t && itemType === t) {
+                    continue;
+                } else {
+                    itemType = ValueType;
+                    break;
+                }
+            }
+
+            type = array(itemType || ValueType, rawValue.length);
+            value = { type: type.name, items: rawValue };
+        } else {
+            type = ObjectType;
+            value = { type: 'Object', value: rawValue };
+        }
+
+        return {
+            literal: true,
+            value,
+            type,
+            key
         };
     }
 
@@ -170,17 +200,10 @@ function parseExpression(
         args.push(parsedArg);
     }
 
-    let type = definition.type;
-    // special handling for ['array', ...]: construct its type based on the
-    // number of arguments provided
-    if (op === 'array') {
-        type = lambda(array(typename('T'), args.length), nargs(Infinity, typename('T')));
-    }
-
     return {
         literal: false,
         name: op,
-        type: type,
+        type: definition.type,
         arguments: args,
         key
     };

@@ -52,9 +52,14 @@ module.exports = () => ({
         else return titlecase(typeof x);
     },
 
+    // type assertion
     as: function (value, expectedType, name) {
         const type = this.typeOf(value);
-        ensure(type === expectedType, `Expected ${name || 'value'} to be of type ${expectedType}, but found ${type} instead.`);
+        if (expectedType === 'Array') {
+            ensure(type.startsWith('Array'), `Expected ${name || 'value'} to be an array, but found ${type} instead.`);
+        } else {
+            ensure(type === expectedType, `Expected ${name || 'value'} to be of type ${expectedType}, but found ${type} instead.`);
+        }
         return value;
     },
 
@@ -70,21 +75,13 @@ module.exports = () => ({
         }
     },
 
-    color: function (input) {
+    parseColor: function (input) {
         const c = {
             type: 'Color',
             value: parseColor(input)
         };
         ensure(typeof c.value !== 'undefined', `Could not parse color from value '${input}'`);
         return c;
-    },
-
-    array: function(type, items) {
-        return {type, items};
-    },
-
-    object: function(value) {
-        return {type: 'Object', value};
     },
 
     rgba: function (...components) {
@@ -97,6 +94,26 @@ module.exports = () => ({
                 components.length > 3 ? components[3] : 1
             ]
         };
+    },
+
+    array: function(type, items) {
+        return {type, items};
+    },
+
+    object: function(value) {
+        return {type: 'Object', value};
+    },
+
+    toString: function(value) {
+        const type = this.typeOf(value);
+        ensure(value === null || /^(String|Number|Boolean)$/.test(type), `Expected a primitive value in ["string", ...], but found ${type} instead.`);
+        return String(value);
+    },
+
+    toNumber: function(value) {
+        const num = Number(value);
+        ensure(!isNaN(num), `Could not convert ${JSON.stringify(this.unwrap(value))} to number.`);
+        return num;
     },
 
     unwrap: function (maybeWrapped) {

@@ -39,41 +39,80 @@ const expressions: { [string]: Definition } = {
     'ln2': defineMathConstant('ln2'),
     'pi': defineMathConstant('pi'),
     'e': defineMathConstant('e'),
+
+    'typeof': {
+        name: 'typeof',
+        type: lambda(StringType, ValueType),
+        compile: fromContext('typeOf')
+    },
+
+    // type assertions
     'string': {
         name: 'string',
         type: lambda(StringType, ValueType),
-        compile: args => ({ js: `String(${args[0].js})` })
+        compile: args => ({ js: `this.as(${args[0].js}, 'String')` })
     },
     'number': {
         name: 'string',
         type: lambda(NumberType, ValueType),
-        compile: args => ({js: `Number(${args[0].js})`})
+        compile: args => ({ js: `this.as(${args[0].js}, 'Number')` })
     },
     'boolean': {
         name: 'boolean',
         type: lambda(BooleanType, ValueType),
-        compile: args => ({js: `Boolean(${args[0].js})`})
+        compile: args => ({ js: `this.as(${args[0].js}, 'Boolean')` })
     },
     'array': {
         name: 'array',
-        type: lambda(array(typename('T')), nargs(Infinity, typename('T'))),
-        compile: (args, e) => ({js: `this.array(${JSON.stringify(e.type.result.name)}, [${args.map(a => a.js).join(', ')}])`})
+        type: lambda(array(ValueType), ValueType),
+        compile: (args) => ({js: `this.as(${args[0].js}, 'Array')`})
     },
     'object': {
         name: 'object',
         type: lambda(ObjectType, ValueType),
         compile: args => ({js: `this.as(${args[0].js}, 'Object')`})
     },
-    'color': {
-        name: 'color',
-        type: lambda(ColorType, StringType),
-        compile: fromContext('color')
+
+    // type coercion
+    'to_string': {
+        name: 'to_string',
+        type: lambda(StringType, ValueType),
+        compile: args => ({js: `this.toString(${args[0].js})`})
     },
-    'color_to_array': {
-        name: 'color_to_array',
+    'to_number': {
+        name: 'to_number',
+        type: lambda(NumberType, ValueType),
+        compile: args => ({js: `this.toNumber(${args[0].js})`})
+    },
+    'to_boolean': {
+        name: 'to_boolean',
+        type: lambda(BooleanType, ValueType),
+        compile: args => ({js: `Boolean(${args[0].js})`})
+    },
+    'to_rgba': {
+        name: 'to_rgba',
         type: lambda(array(NumberType, 4), ColorType),
         compile: args => ({js: `this.array('Array<Number, 4>', ${args[0].js}.value)`})
     },
+
+    // color 'constructors'
+    'parse_color': {
+        name: 'parse_color',
+        type: lambda(ColorType, StringType),
+        compile: fromContext('parseColor')
+    },
+    'rgb': {
+        name: 'rgb',
+        type: lambda(ColorType, NumberType, NumberType, NumberType),
+        compile: fromContext('rgba')
+    },
+    'rgba': {
+        name: 'rgb',
+        type: lambda(ColorType, NumberType, NumberType, NumberType, NumberType),
+        compile: fromContext('rgba')
+    },
+
+    // object/array access
     'get': {
         name: 'get',
         type: lambda(ValueType, StringType, nargs(1, ObjectType)),
@@ -99,11 +138,6 @@ const expressions: { [string]: Definition } = {
         ),
         compile: fromContext('at')
     },
-    'typeof': {
-        name: 'typeof',
-        type: lambda(StringType, ValueType),
-        compile: fromContext('typeOf')
-    },
     'length': {
         name: 'length',
         type: lambda(NumberType, variant(
@@ -121,6 +155,8 @@ const expressions: { [string]: Definition } = {
             };
         }
     },
+
+    // feature and map data
     'properties': {
         name: 'properties',
         type: lambda(ObjectType),
@@ -150,6 +186,8 @@ const expressions: { [string]: Definition } = {
         type: lambda(NumberType),
         compile: () => ({js: 'mapProperties.zoom', isZoomConstant: false})
     },
+
+    // math
     '+': defineBinaryMathOp('+', true),
     '*': defineBinaryMathOp('*', true),
     '-': defineBinaryMathOp('-'),
@@ -182,6 +220,8 @@ const expressions: { [string]: Definition } = {
         type: lambda(BooleanType, BooleanType),
         compile: args => ({js: `!(${args[0].js})`})
     },
+
+    // string manipulation
     'upcase': {
         name: 'upcase',
         type: lambda(StringType, StringType),
@@ -197,16 +237,8 @@ const expressions: { [string]: Definition } = {
         type: lambda(StringType, nargs(Infinity, ValueType)),
         compile: args => ({js: `[${args.map(a => a.js).join(', ')}].join('')`})
     },
-    'rgb': {
-        name: 'rgb',
-        type: lambda(ColorType, NumberType, NumberType, NumberType),
-        compile: fromContext('rgba')
-    },
-    'rgba': {
-        name: 'rgb',
-        type: lambda(ColorType, NumberType, NumberType, NumberType, NumberType),
-        compile: fromContext('rgba')
-    },
+
+    // decisions
     'case': {
         name: 'case',
         type: lambda(typename('T'), nargs(Infinity, BooleanType, typename('T')), typename('T')),

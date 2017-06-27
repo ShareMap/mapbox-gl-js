@@ -60,12 +60,12 @@ function lambda(result: Type, ...params: Array<Type>) /*: LambdaType */ {
     };
 }
 
-const NullType = primitive('null');
-const NumberType = primitive('number');
-const StringType = primitive('string');
-const BooleanType = primitive('boolean');
-const ColorType = primitive('color');
-const ObjectType = primitive('object');
+const NullType = primitive('Null');
+const NumberType = primitive('Number');
+const StringType = primitive('String');
+const BooleanType = primitive('Boolean');
+const ColorType = primitive('Color');
+const ObjectType = primitive('Object');
 
 const ValueType = variant(
     NullType,

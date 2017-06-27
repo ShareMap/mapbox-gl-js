@@ -14,7 +14,7 @@
       "result": "success",
       "isFeatureConstant": true,
       "isZoomConstant": true,
-      "type": "string"
+      "type": "String"
     },
     "evaluateResults": [
       "string"

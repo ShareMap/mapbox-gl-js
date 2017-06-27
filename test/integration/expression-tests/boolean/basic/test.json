@@ -73,7 +73,7 @@
       "result": "success",
       "isFeatureConstant": false,
       "isZoomConstant": true,
-      "type": "boolean"
+      "type": "Boolean"
     },
     "evaluateResults": [
       {
@@ -81,11 +81,21 @@
       },
       true,
       false,
-      false,
-      true,
-      false,
-      true,
-      false
+      {
+        "error": "ExpressionEvaluationError: Expected value to be of type Boolean, but found String instead."
+      },
+      {
+        "error": "ExpressionEvaluationError: Expected value to be of type Boolean, but found String instead."
+      },
+      {
+        "error": "ExpressionEvaluationError: Expected value to be of type Boolean, but found Number instead."
+      },
+      {
+        "error": "ExpressionEvaluationError: Expected value to be of type Boolean, but found Number instead."
+      },
+      {
+        "error": "ExpressionEvaluationError: Expected value to be of type Boolean, but found Null instead."
+      }
     ]
   }
 }

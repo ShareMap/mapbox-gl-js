@@ -1,6 +1,6 @@
 {
   "expression": [
-    "color",
+    "parse_color",
     [
       "string",
       [
@@ -40,7 +40,7 @@
       "result": "success",
       "isFeatureConstant": false,
       "isZoomConstant": true,
-      "type": "color"
+      "type": "Color"
     },
     "evaluateResults": [
       [

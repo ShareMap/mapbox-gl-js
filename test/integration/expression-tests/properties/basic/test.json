@@ -27,7 +27,7 @@
       "result": "success",
       "isFeatureConstant": false,
       "isZoomConstant": true,
-      "type": "object"
+      "type": "Object"
     },
     "evaluateResults": [
       {},

@@ -50,7 +50,7 @@
       "result": "success",
       "isFeatureConstant": false,
       "isZoomConstant": true,
-      "type": "boolean"
+      "type": "Boolean"
     },
     "evaluateResults": [
       false,

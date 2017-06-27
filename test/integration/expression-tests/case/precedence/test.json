@@ -28,7 +28,7 @@
       "result": "success",
       "isFeatureConstant": true,
       "isZoomConstant": true,
-      "type": "boolean"
+      "type": "Boolean"
     },
     "evaluateResults": [
       false

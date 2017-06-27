@@ -1,15 +1,34 @@
 {
   "expression": [
     "array",
-    1,
-    2
+    [
+      "literal",
+      [
+        1,
+        2,
+        3
+      ]
+    ]
+  ],
+  "evaluate": [
+    [
+      {},
+      {}
+    ]
   ],
   "expected": {
     "compileResult": {
       "result": "success",
       "isFeatureConstant": true,
       "isZoomConstant": true,
-      "type": "Array<number, 2>"
-    }
+      "type": "Array<Variant<Null | Number | String | Boolean | Color | Object | Array<(recursive_wrapper)>>>"
+    },
+    "evaluateResults": [
+      [
+        1,
+        2,
+        3
+      ]
+    ]
   }
 }

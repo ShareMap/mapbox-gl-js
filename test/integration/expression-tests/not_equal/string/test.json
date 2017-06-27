@@ -21,8 +21,8 @@
       {},
       {
         "properties": {
-          "x": 1,
-          "y": 1
+          "x": "1",
+          "y": "1"
         }
       }
     ],
@@ -30,8 +30,8 @@
       {},
       {
         "properties": {
-          "x": 1,
-          "y": 2
+          "x": "1",
+          "y": "2"
         }
       }
     ]
@@ -41,7 +41,7 @@
       "result": "success",
       "isFeatureConstant": false,
       "isZoomConstant": true,
-      "type": "boolean"
+      "type": "Boolean"
     },
     "evaluateResults": [
       false,
