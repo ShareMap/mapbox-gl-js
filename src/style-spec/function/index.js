@@ -1,6 +1,5 @@
 
 const assert = require('assert');
-const expressions = require('./expressions');
 const compileExpression = require('./compile');
 const convert = require('./convert');
 const {ColorType, StringType, NumberType, ValueType, array} = require('./types');
@@ -21,7 +20,7 @@ function createFunction(parameters, propertySpec) {
     }
 
     const expectedType = getExpectedType(propertySpec);
-    const compiled = compileExpression(expressions, expr, expectedType);
+    const compiled = compileExpression(expr, expectedType);
     if (compiled.result === 'success') {
         const f = function (zoom, properties) {
             const val = compiled.function({zoom}, {properties});
@@ -49,7 +48,6 @@ function createFunction(parameters, propertySpec) {
                     interpExpression.push(f.zoomStops[i], i);
                 }
                 const interpFunction = compileExpression(
-                    expressions,
                     ['coalesce', interpExpression, 0],
                     NumberType
                 );
