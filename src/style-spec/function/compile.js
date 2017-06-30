@@ -75,26 +75,20 @@ function compileExpression(
 
         const compiled = compile(null, checked.expression);
         if (compiled.result === 'success') {
-            try {
-                const fn = new Function('mapProperties', 'feature', `
-        mapProperties = mapProperties || {};
-        if (feature && typeof feature === 'object') {
-            feature = this.object(feature);
-        }
-        var props;
-        if (feature && feature.type === 'Object') {
-            props = (typeof feature.value.properties === 'object') ?
-                this.object(feature.value.properties) : feature.value.properties;
-        }
-        if (!props) { props = this.object({}); }
-        return this.unwrap(${compiled.js})
-        `);
-                compiled.function = fn.bind(evaluationContext());
-            } catch (e) {
-                console.log(JSON.stringify(expr, null, 2))
-                console.log(compiled.js);
-                throw e;
-            }
+            const fn = new Function('mapProperties', 'feature', `
+    mapProperties = mapProperties || {};
+    if (feature && typeof feature === 'object') {
+        feature = this.object(feature);
+    }
+    var props;
+    if (feature && feature.type === 'Object') {
+        props = (typeof feature.value.properties === 'object') ?
+            this.object(feature.value.properties) : feature.value.properties;
+    }
+    if (!props) { props = this.object({}); }
+    return this.unwrap(${compiled.js})
+    `);
+            compiled.function = fn.bind(evaluationContext());
         }
 
         return compiled;
