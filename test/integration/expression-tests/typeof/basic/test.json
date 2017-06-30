@@ -43,7 +43,31 @@
       {},
       {
         "properties": {
-          "x": []
+          "x": [1, 2, 3]
+        }
+      }
+    ],
+    [
+      {},
+      {
+        "properties": {
+          "x": ["a", "b", "c"]
+        }
+      }
+    ],
+    [
+      {},
+      {
+        "properties": {
+          "x": [true, false]
+        }
+      }
+    ],
+    [
+      {},
+      {
+        "properties": {
+          "x": [1, false]
         }
       }
     ],
@@ -68,7 +92,10 @@
       "String",
       "Number",
       "Boolean",
-      "Array",
+      "Array<Number, 3>",
+      "Array<String, 3>",
+      "Array<Boolean, 2>",
+      "Array<Value, 2>",
       "Object"
     ]
   }

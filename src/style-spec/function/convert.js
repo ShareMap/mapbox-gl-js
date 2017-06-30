@@ -46,7 +46,7 @@ function annotateValue(value, spec) {
     if (spec.type === 'color') {
         return ['parse_color', ['string', value]];
     } else if (spec.type === 'array' && typeof spec.length === 'number') {
-        return ['array', spec.value, value];
+        return ['array', spec.value, spec.length, value];
     } else if (spec.type === 'array') {
         return ['array', spec.value, value];
     } else {

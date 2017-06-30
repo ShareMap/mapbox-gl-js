@@ -1,6 +1,7 @@
 const parseColor = require('../util/parse_color');
 const interpolate = require('../util/interpolate');
 const interpolationFactor = require('./interpolation_factor');
+const {ArrayLiteral} = require('./expression');
 
 class RuntimeError extends Error {
     constructor(message) {
@@ -97,13 +98,8 @@ module.exports = () => ({
 
     array: function(type, items) {
         if (!type) {
-            let itemtype;
-            for (const item of items) {
-                if (!itemtype) itemtype = typeof item;
-                else if (itemtype !== typeof item) itemtype = 'Value';
-            }
-            type = (!itemtype || itemtype === 'Value') ?
-                'Array' : `Array<${titlecase(itemtype)}>`;
+            const t = ArrayLiteral.inferArrayType(items);
+            type = t.name;
         }
         return {type, items};
     },

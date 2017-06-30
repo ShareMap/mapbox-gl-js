@@ -16,7 +16,7 @@ const {
     nargs
 } = require('../types');
 
-const { ParsingError, LambdaExpression } = require('../expression');
+const { parseExpression, ParsingError, LambdaExpression } = require('../expression');
 
 const MatchExpression = require('./match');
 const CurveExpression = require('./curve');
@@ -43,7 +43,6 @@ const expressions: { [string]: Class<LambdaExpression> } = {
     'object': defineAssertion('object', ObjectType),
     'array': class extends LambdaExpression {
         static getName() { return 'array'; }
-        static getType() { return lambda(array(ValueType), StringType, ValueType); }
         static parse(args, context) {
             const types : {[string]:Type} = {
                 string: StringType,
@@ -51,21 +50,32 @@ const expressions: { [string]: Class<LambdaExpression> } = {
                 boolean: BooleanType
             };
 
-            if (args.length === 2 && typeof args[0] === 'string') {
-                const itemType = types[args[0]];
-                if (!itemType)
-                    throw new ParsingError(`${context.key}.1`, `Unsupported array item type ${args[0]}`);
-                const parsed = super.parse(args, context);
-                parsed.type = lambda(array(itemType), StringType, ValueType);
-                return parsed;
-            } else {
-                args = ['Value'].concat(args);
-                return super.parse(args, context);
+            if (args.length === 0)
+                throw new ParsingError(context.key, 'Expected at least one argument to "array"');
+
+            const value = parseExpression(args[args.length - 1], context);
+
+            let itemType = ValueType;
+            let N;
+            if (args.length > 1) {
+                if (typeof args[0] !== 'string' || !types[args[0]])
+                    throw new ParsingError(`${context.key}.1`, `The item type argument to "array" must be one of ${Object.keys(types).join(', ')}`);
+                itemType = types[args[0]];
             }
+            if (args.length > 2) {
+                if (typeof args[1] !== 'number')
+                    throw new ParsingError(`${context.key}.2`, 'The length argument to "array" must be a number literal.');
+                N = args[1];
+            }
+            return new this(
+                context.key,
+                lambda(array(itemType, N), ValueType),
+                [value]
+            );
         }
 
         compile(args) {
-            return { js: `this.as(${args[1].js}, ${JSON.stringify(this.type.result.name)})` };
+            return { js: `this.as(${args[args.length - 1].js}, ${JSON.stringify(this.type.result.name)})` };
         }
     },
 

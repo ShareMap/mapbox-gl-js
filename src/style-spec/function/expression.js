@@ -23,8 +23,6 @@ export type CompiledExpression = {|
     function?: Function
 |}
 
-export type LiteralValue = null | string | number | boolean | {} | Array<LiteralValue>
-
 const primitiveTypes = {
     string: StringType,
     number: NumberType,
@@ -78,72 +76,107 @@ class BaseExpression {
 }
 
 class LiteralExpression extends BaseExpression {
-    type: PrimitiveType | ArrayType;
-    value: LiteralValue;
-    constructor(key: *, type: PrimitiveType | ArrayType, value: LiteralValue) {
+    value: any;
+    constructor(key: *, type: PrimitiveType | ArrayType, value: any) {
         super(key, type);
         this.value = value;
     }
 
+    compile() { throw new Error('Unimplemented'); }
+}
+
+class PrimitiveLiteral extends LiteralExpression {
+    type: PrimitiveType;
+    value: null | string | number | boolean;
+    constructor(
+        key: *,
+        type: PrimitiveType,
+        value: null | string | number | boolean
+    ) {
+        super(key, type, value);
+    }
+
     static parse(value: any, context: ParsingContext) {
-        const type = typeof value;
-        if (
-            type === 'string' ||
-            type === 'number' ||
-            type === 'boolean'
-        ) {
-            return new this(context.key, primitiveTypes[type], value);
-        }
-
-        if (Array.isArray(value)) {
-            let itemType;
-            // infer the array's item type
-            for (const item of value) {
-                const t = primitiveTypes[typeof item];
-                if (t && !itemType) {
-                    itemType = t;
-                } else if (t && itemType === t) {
-                    continue;
-                } else {
-                    itemType = ValueType;
-                    break;
-                }
-            }
-
-            const type = array(itemType || ValueType, value.length);
-            return new this(
-                context.key,
-                type,
-                value
-            );
-        } else if (value && typeof value === 'object') {
-            return new this(context.key, ObjectType, value);
-        } else {
-            throw new ParsingError(context.key, `Expected an array or object, but found ${typeof value} instead`);
-        }
+        const type = value === null ? NullType : primitiveTypes[typeof value];
+        return new this(context.key, type, value);
     }
 
     compile() {
-        let wrapped;
-        if (Array.isArray(this.value)) {
-            wrapped = {
-                type: this.type.name,
-                items: this.value
-            };
-        } else if (this.value && typeof this.value === 'object') {
-            wrapped = {
-                type: this.type.name,
-                value: this.value
-            };
-        }
-        return {
-            js: wrapped ? `(${JSON.stringify(wrapped)})` : JSON.stringify(this.value)
-        };
+        return {js: JSON.stringify(this.value)};
     }
 
     serialize(_: boolean) {
         return this.value;
     }
+}
+
+class ArrayLiteral extends LiteralExpression {
+    type: ArrayType;
+    value: Array<any>;
+    constructor(key: *, type: ArrayType, value: Array<any>) {
+        super(key, type, value);
+    }
+
+    static inferArrayType(value: Array<any>) {
+        let itemType;
+        // infer the array's item type
+        for (const item of value) {
+            const t = primitiveTypes[typeof item];
+            if (t && !itemType) {
+                itemType = t;
+            } else if (t && itemType === t) {
+                continue;
+            } else {
+                itemType = ValueType;
+                break;
+            }
+        }
+
+        return array(itemType || ValueType, value.length);
+    }
+
+    static parse(value: Array<any>, context: ParsingContext) {
+        return new this(
+            context.key,
+            this.inferArrayType(value),
+            value
+        );
+    }
+
+    compile() {
+        const wrapped = {
+            type: this.type.name,
+            items: this.value
+        };
+        return {
+            js: `(${JSON.stringify(wrapped)})`
+        };
+    }
+
+    serialize() { return ['literal', this.value]; }
+}
+
+class ObjectLiteral extends LiteralExpression {
+    value: {};
+    constructor(key: *, value: {}) {
+        super(key, ObjectType, value);
+    }
+
+    static parse(value: {}, context: ParsingContext) {
+        return new this(context.key, value);
+    }
+
+    compile() {
+        const wrapped = {
+            type: this.type.name,
+            value: this.value
+        };
+        return {
+            js: `(${JSON.stringify(wrapped)})`
+        };
+    }
+
+    serialize() { return ['literal', this.value]; }
 }
 
 class LambdaExpression extends BaseExpression {
@@ -184,10 +217,10 @@ class LambdaExpression extends BaseExpression {
 function parseExpression(expr: mixed, context: ParsingContext) : Expression {
     const key = context.key;
     if (expr === null || typeof expr === 'undefined')
-        return new LiteralExpression(key, NullType, null);
+        return PrimitiveLiteral.parse(expr, context);
 
     if (primitiveTypes[typeof expr])
-        return LiteralExpression.parse(expr, context);
+        return PrimitiveLiteral.parse(expr, context);
 
     if (!Array.isArray(expr)) {
         throw new ParsingError(key, `Expected an array, but found ${typeof expr} instead.`);
@@ -201,7 +234,15 @@ function parseExpression(expr: mixed, context: ParsingContext) : Expression {
     if (op === 'literal') {
         if (expr.length !== 2)
             throw new ParsingError(key, `'literal' expression requires exactly one argument, but found ${expr.length - 1} instead.`);
-        return LiteralExpression.parse(expr[1], context.concat(1, 'literal'));
+        const argcontext = context.concat(1, 'literal');
+        if (Array.isArray(expr[1])) {
+            return ArrayLiteral.parse(expr[1], argcontext);
+        }
+        if (expr[1] && typeof expr[1] === 'object') {
+            return ObjectLiteral.parse(expr[1], argcontext);
+        }
+
+        throw new ParsingError(argcontext.key, `Expected argument to 'literal' to be an array or object, but found ${typeof expr[1]} instead.`);
     }
 
     const Expr = context.definitions[op];
@@ -217,5 +258,6 @@ module.exports = {
     ParsingError,
     parseExpression,
     LiteralExpression,
-    LambdaExpression
+    LambdaExpression,
+    ArrayLiteral
 };
