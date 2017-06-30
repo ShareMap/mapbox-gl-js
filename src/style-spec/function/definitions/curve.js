@@ -1,5 +1,3 @@
-'use strict';
-
 // @flow
 
 const {
@@ -13,11 +11,13 @@ const {
 
 const { ParsingError, LiteralExpression, LambdaExpression } = require('../expression');
 
-/*::
- import type { Expression, CompiledExpression } from '../expression';
- import type { LambdaType } from '../types';
- type InterpolationType = { name: 'step' } | { name: 'linear' } | { name: 'exponential', base: number }
-*/
+import type { Expression, CompiledExpression } from '../expression';
+import type { LambdaType } from '../types';
+
+type InterpolationType =
+    { name: 'step' } |
+    { name: 'linear' } |
+    { name: 'exponential', base: number }
 
 class CurveExpression extends LambdaExpression {
     interpolation: InterpolationType;

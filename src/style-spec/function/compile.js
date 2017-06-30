@@ -1,4 +1,3 @@
-'use strict';
 // @flow
 
 const assert = require('assert');
@@ -15,20 +14,18 @@ const expressions = require('./definitions');
 const typecheck = require('./type_check');
 const evaluationContext = require('./evaluation_context');
 
-/*::
- import type { Type } from './types.js';
- import type { Expression, CompiledExpression } from './expression.js';
+import type { Type } from './types.js';
+import type { Expression, CompiledExpression } from './expression.js';
 
- type CompileError = {|
-     error: string,
-     key: string
- |}
+type CompileError = {|
+    error: string,
+    key: string
+|}
 
- type CompileErrors = {|
-     result: 'error',
-     errors: Array<CompileError>
- |}
- */
+type CompileErrors = {|
+    result: 'error',
+    errors: Array<CompileError>
+|}
 
 /**
  *
@@ -105,7 +102,7 @@ function compileExpression(
     assert(false, 'parseExpression should always return either error or typed expression');
 }
 
-function compile(expected: Type | null, e: Expression) /*: CompiledExpression | CompileErrors */ {
+function compile(expected: Type | null, e: Expression) : CompiledExpression | CompileErrors {
     if (e instanceof LiteralExpression) {
         return {
             result: 'success',

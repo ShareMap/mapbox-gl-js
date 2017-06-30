@@ -1,15 +1,12 @@
-'use strict';
 // @flow
 
-/*::
- export type PrimitiveType = { kind: 'primitive', name: string }
- export type TypeName = { kind: 'typename', name: string, typename: string }
- export type VariantType = { kind: 'variant', name: string, members: Array<Type> }
- export type ArrayType = { kind: 'array', name: string, itemType: Type, N: ?number }
- export type NArgs = { kind: 'nargs', name: string, types: Array<Type>, N: number }
- export type LambdaType = { kind: 'lambda', name: string, result: Type, params: Array<Type> }
- export type Type = PrimitiveType | TypeName | VariantType | ArrayType | NArgs | LambdaType
-*/
+export type Type = PrimitiveType | TypeName | VariantType | ArrayType | NArgs | LambdaType // eslint-disable-line no-use-before-define
+export type PrimitiveType = { kind: 'primitive', name: string }
+export type TypeName = { kind: 'typename', name: string, typename: string }
+export type VariantType = { kind: 'variant', name: string, members: Array<Type> }
+export type ArrayType = { kind: 'array', name: string, itemType: Type, N: ?number }
+export type NArgs = { kind: 'nargs', name: string, types: Array<Type>, N: number }
+export type LambdaType = { kind: 'lambda', name: string, result: Type, params: Array<Type> }
 
 const NullType = primitive('Null');
 const NumberType = primitive('Number');
@@ -30,15 +27,15 @@ const ValueArray = array(ValueType);
 ValueType.members.push(ValueArray);
 ValueType.name = 'Value';
 
-function primitive(name) /*: PrimitiveType */ {
+function primitive(name) : PrimitiveType {
     return { kind: 'primitive', name };
 }
 
-function typename(tn: string)/*: TypeName */ {
+function typename(tn: string) : TypeName {
     return { kind: 'typename', name: `typename ${tn}`, typename: tn };
 }
 
-function variant(...types: Array<Type>) /*: VariantType */ {
+function variant(...types: Array<Type>) : VariantType {
     return {
         kind: 'variant',
         members: types,
@@ -46,7 +43,7 @@ function variant(...types: Array<Type>) /*: VariantType */ {
     };
 }
 
-function array(itemType: Type, N: ?number) /*: ArrayType */ {
+function array(itemType: Type, N: ?number) : ArrayType {
     return {
         kind: 'array',
         name: typeof N === 'number' ? `Array<${itemType.name}, ${N}>` :
@@ -56,7 +53,7 @@ function array(itemType: Type, N: ?number) /*: ArrayType */ {
     };
 }
 
-function nargs(N: number, ...types: Array<Type>) /*: NArgs */ {
+function nargs(N: number, ...types: Array<Type>) : NArgs {
     return {
         kind: 'nargs',
         name: `${types.map(t => t.name).join(', ')}, ...`,
@@ -65,7 +62,7 @@ function nargs(N: number, ...types: Array<Type>) /*: NArgs */ {
     };
 }
 
-function lambda(result: Type, ...params: Array<Type>) /*: LambdaType */ {
+function lambda(result: Type, ...params: Array<Type>) : LambdaType {
     return {
         kind: 'lambda',
         name: `(${params.map(a => a.name).join(', ')}) => ${result.name}`,

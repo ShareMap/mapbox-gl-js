@@ -1,10 +1,4 @@
-'use strict';
-
 // @flow
-
-/*::
- import type { CompiledExpression, Expression } from '../expression.js';
- */
 
 const assert = require('assert');
 
@@ -20,6 +14,8 @@ const {
     LambdaExpression,
     ParsingError
 } = require('../expression');
+
+import type { CompiledExpression } from '../expression.js';
 
 class MatchExpression extends LambdaExpression {
     constructor(key: *, type: *, args: *) {

@@ -1,11 +1,18 @@
-'use strict';
-
 // @flow
 
-/*::
+const {
+    NullType,
+    StringType,
+    NumberType,
+    BooleanType,
+    ObjectType,
+    ValueType,
+    array
+} = require('./types');
+
 import type { Type, PrimitiveType, ArrayType, LambdaType } from './types.js';
 import type { ExpressionName } from './expression_name.js';
-export type Expression = LambdaExpression | LiteralExpression;
+export type Expression = LambdaExpression | LiteralExpression; // eslint-disable-line no-use-before-define
 export type CompiledExpression = {|
     result: 'success',
     js: string,
@@ -17,18 +24,6 @@ export type CompiledExpression = {|
 |}
 
 export type LiteralValue = null | string | number | boolean | {} | Array<LiteralValue>
-
-*/
-
-const {
-    NullType,
-    StringType,
-    NumberType,
-    BooleanType,
-    ObjectType,
-    ValueType,
-    array
-} = require('./types');
 
 const primitiveTypes = {
     string: StringType,

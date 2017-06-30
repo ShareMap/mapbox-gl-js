@@ -1,5 +1,3 @@
-'use strict';
-
 /**
  * Returns a ratio that can be used to interpolate between exponential function
  * stops.

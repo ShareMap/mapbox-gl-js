@@ -1,5 +1,3 @@
-'use strict';
-
 const parseColor = require('../util/parse_color');
 const interpolate = require('../util/interpolate');
 const interpolationFactor = require('./interpolation_factor');

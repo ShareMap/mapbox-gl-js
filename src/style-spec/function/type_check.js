@@ -1,26 +1,21 @@
-'use strict';
 // @flow
 
-/*::
- import type { PrimitiveType, TypeName, VariantType, ArrayType, NArgs, LambdaType, Type } from './types.js';
+import type { Type } from './types.js';
 
- import type { ExpressionName } from './expression_name.js';
+import type { Expression } from './expression.js';
 
- import type { Expression } from './expression.js';
+export type TypeError = {|
+    error: string,
+    key: string
+|}
 
- export type TypeError = {|
-     error: string,
-     key: string
- |}
-
- export type TypecheckResult = {|
+export type TypecheckResult = {|
     result: 'success',
     expression: Expression
- |} | {|
+|} | {|
     result: 'error',
     errors: Array<TypeError>
- |}
- */
+|}
 
 const assert = require('assert');
 const util = require('../../util/util');
@@ -33,7 +28,7 @@ module.exports = typeCheckExpression;
 
 // typecheck the given expression and return a new TypedExpression
 // tree with all generics resolved
-function typeCheckExpression(expected: Type, e: Expression) /*: TypecheckResult */ {
+function typeCheckExpression(expected: Type, e: Expression) : TypecheckResult {
     if (e instanceof LiteralExpression) {
         const error = match(expected, e.type);
         if (error) return { result: 'error', errors: [{ key: e.key, error }] };
@@ -222,7 +217,7 @@ function match(expected: Type, t: Type, expectedTypenames: { [string]: Type } = 
     throw new Error(`${expected.name} is not a valid output type.`);
 }
 
-function stringifyExpression(e: Expression, withTypes: boolean = false) /*:string*/ {
+function stringifyExpression(e: Expression, withTypes: boolean = false) :string {
     return JSON.stringify(e.serialize(withTypes));
 }
 
@@ -242,7 +237,7 @@ function isGeneric (type, stack = []) {
     return false;
 }
 
-function resolveTypenamesIfPossible(type: Type, typenames: {[string]: Type}, stack = []) /*: Type */{
+function resolveTypenamesIfPossible(type: Type, typenames: {[string]: Type}, stack = []) : Type {
     assert(stack.indexOf(type) < 0, 'resolveTypenamesIfPossible() implementation does not support recursive variants.');
 
     if (!isGeneric(type)) return type;

@@ -1,10 +1,68 @@
-'use strict';
-
 // This would ideally be in expressions.js, but pulled into separate file
 // to avoid circular imports, due to https://github.com/facebook/flow/issues/3249
-
-/*::
- export type ExpressionName = "literal" | "ln2" | "pi" | "e" | "string" | "number" | "boolean" | "array" | "object" | "to_string" | "to_number" | "to_boolean" | "get" | "has" | "at" | "typeof" | "length" | "zoom" | "properties" | "geometry_type" | "id" | "case" | "match" | "coalesce" | "==" | "!=" | ">" | ">=" | "<=" | "<" | "&&" | "||" | "!" | "curve" | "step" | "exponential" | "linear" | "cubic-bezier" | "+" | "-" | "*" | "/" | "%" | "^" | "log10" | "ln" | "log2" | "sin" | "cos" | "tan" | "asin" | "acos" | "atan" | "ceil" | "floor" | "round" | "abs" | "min" | "max" | "concat" | "upcase" | "downcase" | "rgb" | "rgba" | "color" | "to_rgba"
-*/
+export type ExpressionName =
+    "!" |
+    "!=" |
+    "%" |
+    "&&" |
+    "*" |
+    "+" |
+    "-" |
+    "/" |
+    "<" |
+    "<=" |
+    "==" |
+    ">" |
+    ">=" |
+    "^" |
+    "abs" |
+    "acos" |
+    "array" |
+    "asin" |
+    "at" |
+    "atan" |
+    "boolean" |
+    "case" |
+    "ceil" |
+    "coalesce" |
+    "color" |
+    "concat" |
+    "cos" |
+    "cubic-bezier" |
+    "curve" |
+    "downcase" |
+    "e" |
+    "floor" |
+    "geometry_type" |
+    "get" |
+    "has" |
+    "id" |
+    "length" |
+    "linear" |
+    "ln" |
+    "ln2" |
+    "log10" |
+    "log2" |
+    "match" |
+    "max" |
+    "min" |
+    "number" |
+    "object" |
+    "pi" |
+    "properties" |
+    "rgb" |
+    "rgba" |
+    "round" |
+    "sin" |
+    "string" |
+    "tan" |
+    "to_boolean" |
+    "to_number" |
+    "to_rgba" |
+    "to_string" |
+    "typeof" |
+    "upcase" |
+    "zoom" |
+    "||"
 
 module.exports = {};

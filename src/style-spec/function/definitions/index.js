@@ -1,5 +1,3 @@
-'use strict';
-
 // @flow
 
 const assert = require('assert');
@@ -23,11 +21,9 @@ const { ParsingError, LambdaExpression } = require('../expression');
 const MatchExpression = require('./match');
 const CurveExpression = require('./curve');
 
-/*::
- import type { Type, PrimitiveType, ArrayType, LambdaType } from '../types.js';
- import type { ExpressionName } from '../expression_name.js';
- import type { CompiledExpression } from '../expression.js';
- */
+import type { Type } from '../types.js';
+import type { ExpressionName } from '../expression_name.js';
+import type { CompiledExpression } from '../expression.js';
 
 const expressions: { [string]: Class<LambdaExpression> } = {
     'ln2': defineMathConstant('ln2'),
