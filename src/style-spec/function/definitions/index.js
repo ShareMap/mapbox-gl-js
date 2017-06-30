@@ -105,7 +105,7 @@ const expressions: { [string]: Class<LambdaExpression> } = {
         static getName() { return 'to_rgba'; }
         static getType() { return lambda(array(NumberType, 4), ColorType); }
         compile(args) {
-            return {js: `this.array('Array<Number, 4>', ${args[0].js}.value)`};
+            return {js: `${args[0].js}.value`};
         }
     },
 
@@ -159,11 +159,7 @@ const expressions: { [string]: Class<LambdaExpression> } = {
             let t = args[0].type;
             if (t.kind === 'lambda') { t = t.result; }
             assert(t.kind === 'array' || t.kind === 'primitive');
-            return {
-                js: t.kind === 'array' ?
-                    `${args[0].js}.items.length` :
-                    `${args[0].js}.length`
-            };
+            return { js: `${args[0].js}.length` };
         }
     },
 

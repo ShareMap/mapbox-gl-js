@@ -4,8 +4,9 @@ const parseColor = require('../util/parse_color');
 const interpolate = require('../util/interpolate');
 const interpolationFactor = require('./interpolation_factor');
 const {ArrayLiteral} = require('./expression');
+const Color = require('./color');
 
-import type { ArrayValue, ObjectValue, Value } from './expression';
+import type { Value } from './expression';
 import type { InterpolationType } from './definitions/curve';
 
 class RuntimeError extends Error {
@@ -31,30 +32,28 @@ module.exports = () => ({
     ensure: ensure,
     error: (msg: string) => ensure(false, msg),
 
-    at: function (index: number, array: ArrayValue) {
-        ensure(index < array.items.length, `${array.type} index out of bounds: ${index} > ${array.items.length}.`);
-        return array.items[index];
+    at: function (index: number, array: Array<Value>) {
+        ensure(index < array.length, `Array index out of bounds: ${index} > ${array.length}.`);
+        return array[index];
     },
 
-    get: function (obj: ObjectValue, key: string, name?: string) {
+    get: function (obj: {[string]: Value}, key: string, name?: string) {
         ensure(this.has(obj, key, name), `Property '${key}' not found in ${name || `object with keys: [${Object.keys(obj).join(', ')}]`}`);
-        const val = obj.value[key];
-
-        if (Array.isArray(val)) return this.array(null, val);
-        if (val && typeof val === 'object') return this.object(val);
-        return val;
+        return obj[key];
     },
 
-    has: function (obj: ObjectValue, key: string, name?: string) {
+    has: function (obj: {[string]: Value}, key: string, name?: string) {
         ensure(obj, `Cannot get property ${key} from null object${name ? ` ${name}` : ''}.`);
-        return this.as(obj, 'Object', name).value.hasOwnProperty(key);
+        return this.as(obj, 'Object', name).hasOwnProperty(key);
     },
 
-    typeOf: function (x: Value) {
+    typeOf: function (x: Value): string {
         if (x === null) return 'Null';
-        if (typeof x === 'object') {
-            if (x.type === 'Array') return x.arrayType;
-            return x.type;
+        if (Array.isArray(x)) {
+            return ArrayLiteral.inferArrayType(x).name;
+        }
+        if (x instanceof Color) {
+            return 'Color';
         }
         return titlecase(typeof x);
     },
@@ -84,36 +83,14 @@ module.exports = () => ({
     },
 
     parseColor: function (input: string) {
-        const c = {
-            type: 'Color',
-            value: parseColor(input)
-        };
-        ensure(typeof c.value !== 'undefined', `Could not parse color from value '${input}'`);
-        return c;
+        const c = parseColor(input);
+        if (!c)
+            throw new RuntimeError(`Could not parse color from value '${input}'`);
+        return new Color(...c);
     },
 
     rgba: function (r: number, g: number, b: number, a?: number) {
-        return {
-            type: 'Color',
-            value: [
-                r / 255,
-                g / 255,
-                b / 255,
-                typeof a === 'undefined' ? 1 : a
-            ]
-        };
-    },
-
-    array: function(arrayType, items: Array<any>): ArrayValue {
-        if (!arrayType) {
-            const t = ArrayLiteral.inferArrayType(items);
-            arrayType = t.name;
-        }
-        return {type: 'Array', arrayType, items};
-    },
-
-    object: function(value: {}): ObjectValue {
-        return {type: 'Object', value};
+        return new Color(r / 255, g / 255, b / 255, a);
     },
 
     toString: function(value: Value) {
@@ -129,17 +106,11 @@ module.exports = () => ({
     },
 
     unwrap: function (maybeWrapped: Value) {
-        if (!maybeWrapped || typeof maybeWrapped !== 'object')
-            return maybeWrapped;
-
-        if (maybeWrapped.type === 'Color' || maybeWrapped.type === 'Object')
+        if (maybeWrapped instanceof Color) {
             return maybeWrapped.value;
-        if (maybeWrapped.type === 'Array')
-            return maybeWrapped.items;
+        }
 
-        // this shouldn't happen; if it does, it's a bug rather than a runtime
-        // expression evaluation error
-        throw new Error(`Unrecognized value: ${JSON.stringify(maybeWrapped)}`);
+        return maybeWrapped;
     },
 
     evaluateCurve(input: number, stopInputs: Array<number>, stopOutputs: Array<Function>, interpolation: InterpolationType, resultType: string) {
@@ -166,17 +137,11 @@ module.exports = () => ({
         const outputUpper = stopOutputs[index + 1]();
 
         if (resultType === 'color') {
-            return {
-                type: 'Color',
-                value: interpolate.color(outputLower.value, outputUpper.value, t)
-            };
+            return new Color(...interpolate.color(outputLower.value, outputUpper.value, t));
         }
 
         if (resultType === 'array') {
-            return this.array(
-                outputLower.type,
-                interpolate.array(outputLower.items, outputUpper.items, t)
-            );
+            return interpolate.array(outputLower, outputUpper, t);
         }
 
         return interpolate[resultType](outputLower, outputUpper, t);

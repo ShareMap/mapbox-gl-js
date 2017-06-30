@@ -23,10 +23,8 @@ export type CompiledExpression = {|
     function?: Function
 |}
 
-export type ColorValue = {| type: 'Color', value: {} |}
-export type ObjectValue = {| type: 'Object', value: {} |}
-export type ArrayValue = {| type: 'Array', arrayType: string, items: Array<any> |}
-export type Value = null | string | boolean | number | ColorValue | ObjectValue | ArrayValue
+import type Color from './color';
+export type Value = null | string | boolean | number | Color | { [string]: Value } | Array<Value>
 
 const primitiveTypes = {
     string: StringType,
@@ -117,12 +115,12 @@ class PrimitiveLiteral extends LiteralExpression {
 
 class ArrayLiteral extends LiteralExpression {
     type: ArrayType;
-    value: ArrayValue;
-    constructor(key: *, type: ArrayType, value: ArrayValue) {
+    value: Array<Value>;
+    constructor(key: *, type: ArrayType, value: Array<Value>) {
         super(key, type, value);
     }
 
-    static inferArrayType(value: Array<any>) {
+    static inferArrayType(value: Array<Value>) {
         let itemType;
         // infer the array's item type
         for (const item of value) {
@@ -145,31 +143,27 @@ class ArrayLiteral extends LiteralExpression {
         return new this(
             context.key,
             arrayType,
-            {
-                type: 'Array',
-                arrayType: arrayType.name,
-                items: value
-            }
+            value
         );
     }
 
     compile() { return { js: `(${JSON.stringify(this.value)})` }; }
-    serialize() { return ['literal', this.value.items]; }
+    serialize() { return ['literal', this.value]; }
 }
 
 class ObjectLiteral extends LiteralExpression {
-    value: ObjectValue;
-    constructor(key: *, value: ObjectValue) {
+    value: {[string]: Value};
+    constructor(key: *, value: {[string]: Value}) {
         super(key, ObjectType, value);
     }
 
     static parse(value: {}, context: ParsingContext) {
-        return new this(context.key, {type: 'Object', value});
+        return new this(context.key, value);
     }
 
     compile() { return { js: `(${JSON.stringify(this.value)})` }; }
 
-    serialize() { return ['literal', this.value.value]; }
+    serialize() { return ['literal', this.value]; }
 }
 
 class LambdaExpression extends BaseExpression {

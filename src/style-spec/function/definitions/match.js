@@ -83,8 +83,8 @@ class MatchExpression extends LambdaExpression {
         // (thunked) output expression.
         const inputMap = {};
         for (let i = 0; i < inputs.length; i++) {
-            assert(typeof inputs[i] === 'object' && inputs[i].value.type === 'Array');
-            const values: Array<number|string|boolean> = (inputs[i].value: any).items;
+            assert(typeof inputs[i] === 'object' && Array.isArray(inputs[i].value));
+            const values: Array<number|string|boolean> = (inputs[i].value: any);
             for (const value of values) {
                 const type = typeof value;
                 inputMap[`${type}-${String(value)}`] = i;
