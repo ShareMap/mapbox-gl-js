@@ -3,10 +3,9 @@
 const parseColor = require('../util/parse_color');
 const interpolate = require('../util/interpolate');
 const interpolationFactor = require('./interpolation_factor');
-const {LiteralExpression} = require('./expression');
-const Color = require('./color');
+const {Color, typeOf} = require('./values');
 
-import type { Value } from './expression';
+import type { Value } from './values';
 import type { InterpolationType } from './definitions/curve';
 
 class RuntimeError extends Error {
@@ -48,14 +47,7 @@ module.exports = () => ({
     },
 
     typeOf: function (x: Value): string {
-        if (x === null) return 'Null';
-        if (Array.isArray(x)) {
-            return LiteralExpression.inferArrayType(x).name;
-        }
-        if (x instanceof Color) {
-            return 'Color';
-        }
-        return titlecase(typeof x);
+        return typeOf(x).name;
     },
 
     // type assertion
@@ -147,10 +139,6 @@ module.exports = () => ({
         return interpolate[resultType](outputLower, outputUpper, t);
     }
 });
-
-function titlecase (s) {
-    return `${s.slice(0, 1).toUpperCase()}${s.slice(1)}`;
-}
 
 /**
  * Returns the index of the last stop <= input, or 0 if it doesn't exist.

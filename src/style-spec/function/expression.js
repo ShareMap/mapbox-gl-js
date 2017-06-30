@@ -4,15 +4,17 @@ const {
     NullType,
     StringType,
     NumberType,
-    BooleanType,
-    ObjectType,
-    ValueType,
-    array
+    BooleanType
 } = require('./types');
 
-import type { Type, PrimitiveType, ArrayType, LambdaType } from './types.js';
-import type { ExpressionName } from './expression_name.js';
+const {isValue, typeOf} = require('./values');
+
+import type { Value }  from './values';
+import type { Type, LambdaType } from './types';
+import type { ExpressionName } from './expression_name';
+
 export type Expression = LambdaExpression | LiteralExpression; // eslint-disable-line no-use-before-define
+
 export type CompiledExpression = {|
     result: 'success',
     js: string,
@@ -22,15 +24,6 @@ export type CompiledExpression = {|
     expression: Expression,
     function?: Function
 |}
-
-import type Color from './color';
-export type Value = null | string | boolean | number | Color | { [string]: Value } | Array<Value>
-
-const primitiveTypes = {
-    string: StringType,
-    number: NumberType,
-    boolean: BooleanType
-};
 
 class ParsingError extends Error {
     key: string;
@@ -80,39 +73,22 @@ class BaseExpression {
 
 class LiteralExpression extends BaseExpression {
     value: Value;
-    constructor(key: *, type: PrimitiveType | ArrayType, value: Value) {
+
+    constructor(key: *, type: Type, value: Value) {
         super(key, type);
-        (this: any).value = value;
+        this.value = value;
     }
 
-    static inferArrayType(value: Array<Value>) {
-        let itemType;
-        // infer the array's item type
-        for (const item of value) {
-            const t = primitiveTypes[typeof item];
-            if (t && !itemType) {
-                itemType = t;
-            } else if (t && itemType === t) {
-                continue;
-            } else {
-                itemType = ValueType;
-                break;
-            }
-        }
+    static parse(args: Array<mixed>, context: ParsingContext) {
+        if (args.length !== 1)
+            throw new ParsingError(context.key, `'literal' expression requires exactly one argument, but found ${args.length} instead.`);
 
-        return array(itemType || ValueType, value.length);
-    }
+        if (!isValue(args[0]))
+            throw new ParsingError(context.key, `invalid value`);
 
-    static parse(value: Value, context: ParsingContext) {
-        let type;
-        if (value === null)
-            type = NullType;
-        else if (Array.isArray(value))
-            type = this.inferArrayType(value);
-        else if (typeof value === 'object')
-            type = ObjectType;
-        else
-            type = primitiveTypes[typeof value];
+        const value = (args[0] : any);
+        const type = typeOf(value);
+
         return new this(context.key, type, value);
     }
 
@@ -157,45 +133,41 @@ class LambdaExpression extends BaseExpression {
 function parseExpression(expr: mixed, context: ParsingContext) : Expression {
     const key = context.key;
 
-    if (typeof expr === 'undefined')
+    if (expr === null) {
+        return new LiteralExpression(key, NullType, expr);
+    } else if (typeof expr === 'undefined') {
         throw new ParsingError(key, `'undefined' value invalid. Use null instead.`);
-    if (
-        expr === null ||
-        typeof expr === 'string' ||
-        typeof expr === 'number' ||
-        typeof expr === 'boolean'
-    )
-        return LiteralExpression.parse(expr, context);
+    } else if (typeof expr === 'string') {
+        return new LiteralExpression(key, StringType, expr);
+    } else if (typeof expr === 'boolean') {
+        return new LiteralExpression(key, BooleanType, expr);
+    } else if (typeof expr === 'number') {
+        return new LiteralExpression(key, NumberType, expr);
+    } else if (Array.isArray(expr)) {
+        if (expr.length === 0) {
+            throw new ParsingError(key, `Expected an array with at least one element.`);
+        }
 
-    if (!Array.isArray(expr)) {
+        const op = expr[0];
+        if (typeof op !== 'string') {
+            throw new ParsingError(`${key}.0`, `Expression name must be a string, but found ${typeof op} instead.`);
+        }
+
+        if (op === 'literal') {
+            return LiteralExpression.parse(expr.slice(1), context);
+        }
+
+        const Expr = context.definitions[op];
+        if (!Expr) {
+            throw new ParsingError(`${key}.0`, `Unknown expression "${op}"`);
+        }
+
+        return Expr.parse(expr.slice(1), context);
+    } else if (typeof expr === 'object') {
+        throw new ParsingError(key, `Bare objects invalid. Use ["literal", {...}] instead.`);
+    } else {
         throw new ParsingError(key, `Expected an array, but found ${typeof expr} instead.`);
     }
-
-    const op = expr[0];
-    if (typeof op !== 'string') {
-        throw new ParsingError(`${key}.0`, `Expression name must be a string, but found ${typeof op} instead.`);
-    }
-
-    if (op === 'literal') {
-        if (expr.length !== 2)
-            throw new ParsingError(key, `'literal' expression requires exactly one argument, but found ${expr.length - 1} instead.`);
-        const argcontext = context.concat(1, 'literal');
-        if (Array.isArray(expr[1])) {
-            return LiteralExpression.parse((expr[1]: any), argcontext);
-        }
-        if (expr[1] && typeof expr[1] === 'object') {
-            return LiteralExpression.parse((expr[1]: any), argcontext);
-        }
-
-        throw new ParsingError(argcontext.key, `Expected argument to 'literal' to be an array or object, but found ${typeof expr[1]} instead.`);
-    }
-
-    const Expr = context.definitions[op];
-    if (!Expr) {
-        throw new ParsingError(`${key}.0`, `Unknown expression "${op}"`);
-    }
-
-    return Expr.parse(expr.slice(1), context);
 }
 
 module.exports = {

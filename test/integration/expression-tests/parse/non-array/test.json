@@ -14,7 +14,7 @@
       "errors": [
         {
           "key": "1.2",
-          "error": "Expected an array, but found object instead."
+          "error": "Bare objects invalid. Use [\"literal\", {...}] instead."
         }
       ]
     }
