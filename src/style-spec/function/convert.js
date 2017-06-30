@@ -86,11 +86,14 @@ function convertZoomAndPropertyFunction(parameters, propertySpec) {
         featureFunctions[zoom].stops.push([stop[0].value, stop[1]]);
     }
 
-    const type = getFunctionType(parameters, propertySpec);
+    // the interpolation type for the zoom dimension of a zoom-and-property
+    // function is determined directly from the style property specification
+    // for which it's being used: linear for interpolatable properties, step
+    // otherwise.
+    const functionType = getFunctionType({}, propertySpec);
     let interpolationType;
-    if (type === 'exponential') {
-        const base = parameters.base !== undefined ? parameters.base : 1;
-        interpolationType = ['exponential', base];
+    if (functionType === 'exponential') {
+        interpolationType = ['linear'];
     } else {
         interpolationType = ['step'];
     }
