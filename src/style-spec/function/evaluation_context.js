@@ -3,7 +3,7 @@
 const parseColor = require('../util/parse_color');
 const interpolate = require('../util/interpolate');
 const interpolationFactor = require('./interpolation_factor');
-const {ArrayLiteral} = require('./expression');
+const {LiteralExpression} = require('./expression');
 const Color = require('./color');
 
 import type { Value } from './expression';
@@ -50,7 +50,7 @@ module.exports = () => ({
     typeOf: function (x: Value): string {
         if (x === null) return 'Null';
         if (Array.isArray(x)) {
-            return ArrayLiteral.inferArrayType(x).name;
+            return LiteralExpression.inferArrayType(x).name;
         }
         if (x instanceof Color) {
             return 'Color';
