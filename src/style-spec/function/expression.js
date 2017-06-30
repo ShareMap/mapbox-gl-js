@@ -145,12 +145,12 @@ function parseExpression(expr: mixed, context: ParsingContext) : Expression {
         return new LiteralExpression(key, NumberType, expr);
     } else if (Array.isArray(expr)) {
         if (expr.length === 0) {
-            throw new ParsingError(key, `Expected an array with at least one element.`);
+            throw new ParsingError(key, `Expected an array with at least one element. If you wanted a literal array, use ["literal", []].`);
         }
 
         const op = expr[0];
         if (typeof op !== 'string') {
-            throw new ParsingError(`${key}.0`, `Expression name must be a string, but found ${typeof op} instead.`);
+            throw new ParsingError(`${key}.0`, `Expression name must be a string, but found ${typeof op} instead. If you wanted a literal array, use ["literal", [...]].`);
         }
 
         if (op === 'literal') {
@@ -159,7 +159,7 @@ function parseExpression(expr: mixed, context: ParsingContext) : Expression {
 
         const Expr = context.definitions[op];
         if (!Expr) {
-            throw new ParsingError(`${key}.0`, `Unknown expression "${op}"`);
+            throw new ParsingError(`${key}.0`, `Unknown expression "${op}". If you wanted a literal array, use ["literal", [...]].`);
         }
 
         return Expr.parse(expr.slice(1), context);

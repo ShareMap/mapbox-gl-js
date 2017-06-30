@@ -6,7 +6,7 @@
       "errors": [
         {
           "key": "",
-          "error": "Expected an array with at least one element."
+          "error": "Expected an array with at least one element. If you wanted a literal array, use [\"literal\", []]."
         }
       ]
     }
