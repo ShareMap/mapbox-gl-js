@@ -7,7 +7,7 @@ const {
     BooleanType
 } = require('./types');
 
-const {isValue, typeOf} = require('./values');
+const {Color, isValue, typeOf} = require('./values');
 
 import type { Value }  from './values';
 import type { Type, LambdaType } from './types';
@@ -93,6 +93,16 @@ class LiteralExpression extends BaseExpression {
     }
 
     compile() { return { js: JSON.stringify(this.value)}; }
+
+    serialize(_: boolean) {
+        if (this.value === null || typeof this.value === 'string' || typeof this.value === 'boolean' || typeof this.value === 'number') {
+            return this.value;
+        } else if (this.value instanceof Color) {
+            return ["rgba"].concat(this.value.value);
+        } else {
+            return ["literal", this.value];
+        }
+    }
 }
 
 class LambdaExpression extends BaseExpression {
