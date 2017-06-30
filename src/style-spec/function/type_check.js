@@ -179,7 +179,8 @@ function match(expected: Type, t: Type, expectedTypenames: { [string]: Type } = 
         t = expected;
     }
 
-    if (t.name === 'null') return null;
+    // a `null` literal is allowed anywhere.
+    if (t.name === 'Null') return null;
 
     if (expected.kind === 'primitive') {
         if (t === expected) return null;
@@ -187,7 +188,7 @@ function match(expected: Type, t: Type, expectedTypenames: { [string]: Type } = 
     } else if (expected.kind === 'array') {
         if (t.kind === 'array') {
             const error = match(expected.itemType, t.itemType, expectedTypenames, tTypenames);
-            if (error) return `${errorMessage}. (${error})`;
+            if (error) return `${errorMessage} (${error})`;
             else if (typeof expected.N === 'number' && expected.N !== t.N) return errorMessage;
             else return null;
         } else {

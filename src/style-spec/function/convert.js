@@ -44,17 +44,11 @@ function convertFunction(parameters, propertySpec) {
 
 function annotateValue(value, spec) {
     if (spec.type === 'color') {
-        return ['color', ['string', value]];
+        return ['parse_color', ['string', value]];
     } else if (spec.type === 'array' && typeof spec.length === 'number') {
-        const result = ['array'];
-        for (let i = 0; i < spec.length; i++) {
-            result.push(annotateValue([ 'at', i, ['json_array', value] ], {type: spec.value}));
-        }
-        return result;
+        return ['array', spec.value, value];
     } else if (spec.type === 'array') {
-        // this probably won't work, since e.g. Vector<Number> won't match
-        // Vector<Value>
-        return ['json_array', value];
+        return ['array', spec.value, value];
     } else {
         const expectedTypeName = spec.type.slice(0, 1).toUpperCase() + spec.type.slice(1);
         const checkType = ['==', expectedTypeName, ['typeof', value]];
@@ -65,9 +59,9 @@ function annotateValue(value, spec) {
 function convertValue(value, spec) {
     if (typeof value === 'undefined') return null;
     if (spec.type === 'color') {
-        return ['color', value];
+        return ['parse_color', value];
     } else if (spec.type === 'array') {
-        return ['array'].concat(value);
+        return ['literal', value];
     } else {
         return value;
     }

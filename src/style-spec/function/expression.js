@@ -124,19 +124,21 @@ class LiteralExpression extends BaseExpression {
     }
 
     compile() {
-        let wrapped = this.value;
+        let wrapped;
         if (Array.isArray(this.value)) {
             wrapped = {
                 type: this.type.name,
                 items: this.value
             };
-        } else if (typeof this.value === 'object') {
+        } else if (this.value && typeof this.value === 'object') {
             wrapped = {
                 type: this.type.name,
                 value: this.value
             };
         }
-        return { js: JSON.stringify(wrapped) };
+        return {
+            js: wrapped ? `(${JSON.stringify(wrapped)})` : JSON.stringify(this.value)
+        };
     }
 
     serialize(_: boolean) {

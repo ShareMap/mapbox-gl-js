@@ -3,7 +3,6 @@ const assert = require('assert');
 const compileExpression = require('./compile');
 const convert = require('./convert');
 const {ColorType, StringType, NumberType, ValueType, array} = require('./types');
-const serialize = require('./type_check').serialize;
 
 function createFunction(parameters, propertySpec) {
     let expr;
@@ -33,12 +32,13 @@ function createFunction(parameters, propertySpec) {
             // our prepopulate-and-interpolate approach to paint properties
             // that are zoom-and-property dependent.
             let curve = compiled.expression;
-            if (curve.name !== 'curve') { curve = curve.arguments[0]; }
-            const curveArgs = [].concat(curve.arguments);
-            const interpolation = serialize(curveArgs.shift());
+            if (curve.name !== 'curve') { curve = curve.args[0]; }
+            const curveArgs = [].concat(curve.args);
+            const serialized = curve.serialize();
+            const interpolation = serialized[1];
 
             f.zoomStops = [];
-            for (let i = 1; i < curveArgs.length; i += 2) {
+            for (let i = 2; i < curveArgs.length; i += 2) {
                 f.zoomStops.push(curveArgs[i].value);
             }
 
@@ -57,6 +57,10 @@ function createFunction(parameters, propertySpec) {
         }
         return f;
     } else {
+        console.log(JSON.stringify(expr, null, 2));
+        for (const err of compiled.errors) {
+            console.log(`${err.key}: ${err.error}`);
+        }
         throw new Error(compiled.errors.map(err => `${err.key}: ${err.error}`).join(', '));
     }
 }

@@ -8,46 +8,49 @@ const {
     lambda,
     variant
 } = require('../../../../src/style-spec/function/types');
+const {
+    parseExpression,
+    ParsingContext,
+    LambdaExpression
+} = require('../../../../src/style-spec/function/expression');
 const typecheck = require('../../../../src/style-spec/function/type_check');
+
+function createParse(types) {
+    const definitions = {};
+    for (const fn in types) {
+        definitions[fn] = class extends LambdaExpression {
+            static getName() { return fn; }
+            static getType() { return types[fn]; }
+        };
+    }
+    return (expr) => parseExpression(expr, new ParsingContext(definitions));
+}
 
 test('typecheck expressions', (t) => {
     t.test('literal', (t) => {
-        const value = {
-            literal: true,
-            value: 'hello',
-            type: StringType
-        };
-        const result = typecheck(StringType, value);
-        t.deepEqual(result, value);
+        const parse = createParse({});
+        const result = typecheck(StringType, parse('hello'));
+        t.deepEqual(result.expression.type, StringType);
         t.end();
     });
 
     t.test('literal wrong type', (t) => {
-        const value = {
-            literal: true,
-            value: 1,
-            type: NumberType
-        };
-        const result = typecheck(StringType, value);
+        const parse = createParse({});
+        const result = typecheck(StringType, parse(1));
         t.ok(result.errors);
         t.end();
     });
 
     t.test('check value tagged with non-generic lambda type', (t) => {
-        const value = {
-            literal: false,
-            name: 'fn',
-            type: lambda(NumberType, StringType),
-            arguments: [{literal: true, value: '', type: StringType}],
-            key: '',
-            matchInputs: null
-        };
+        const parse = createParse({fn: lambda(NumberType, StringType)});
+        const value = parse([ 'fn', '' ]);
 
-        t.deepEqual(typecheck(NumberType, value), value);
+        const expectedType = lambda(NumberType, StringType);
+        t.deepEqual(typecheck(NumberType, value).expression.type, expectedType);
 
-        t.deepEqual(typecheck(lambda(NumberType, StringType), value), value);
-        t.deepEqual(typecheck(lambda(typename('T'), StringType), value), value);
-        t.deepEqual(typecheck(lambda(NumberType, typename('U')), value), value);
+        t.deepEqual(typecheck(lambda(NumberType, StringType), value).expression.type, expectedType);
+        t.deepEqual(typecheck(lambda(typename('T'), StringType), value).expression.type, expectedType);
+        t.deepEqual(typecheck(lambda(NumberType, typename('U')), value).expression.type, expectedType);
 
         // TBD
         // t.deepEqual(typecheck(lambda(variant(NumberType, StringType), StringType), value), value);
@@ -58,37 +61,31 @@ test('typecheck expressions', (t) => {
     });
 
     t.test('check value tagged with lambda type having generic result type', (t) => {
-        const value = {
-            literal: false,
-            name: 'fn',
-            type: lambda(typename('T'), StringType),
-            arguments: [{literal: true, value: '', type: StringType}],
-            key: '',
-            matchInputs: null
-        };
+        const parse = createParse({fn: lambda(typename('T'), StringType)});
+        const value = parse(['fn', '']);
 
         t.deepEqual(
-            typecheck(NumberType, value).type,
+            typecheck(NumberType, value).expression.type,
             lambda(NumberType, StringType)
         );
 
         t.deepEqual(
-            typecheck(StringType, value).type,
+            typecheck(StringType, value).expression.type,
             lambda(StringType, StringType)
         );
 
         t.deepEqual(
-            typecheck(lambda(NumberType, StringType), value).type,
+            typecheck(lambda(NumberType, StringType), value).expression.type,
             lambda(NumberType, StringType)
         );
 
         t.deepEqual(
-            typecheck(lambda(NumberType, typename('T')), value).type,
+            typecheck(lambda(NumberType, typename('T')), value).expression.type,
             lambda(NumberType, StringType)
         );
 
         t.equal(
-            typecheck(lambda(variant(NumberType, StringType), StringType), value).type.name,
+            typecheck(lambda(variant(NumberType, StringType), StringType), value).expression.type.name,
             lambda(variant(NumberType, StringType), StringType).name
         );
 
@@ -97,50 +94,44 @@ test('typecheck expressions', (t) => {
     });
 
     t.test('check value tagged with lambda type having generic input and result type', (t) => {
-        const value = {
-            literal: false,
-            name: 'fn',
-            type: lambda(typename('T'), typename('T'), StringType),
-            arguments: [{literal: true, value: 0, type: NumberType}, {literal: true, value: '', type: StringType}],
-            key: '',
-            matchInputs: null
-        };
+        const parse = createParse({fn: lambda(typename('T'), typename('T'), StringType)});
+        let value = parse(['fn', 0, '']);
 
         t.deepEqual(
-            typecheck(NumberType, value).type,
+            typecheck(NumberType, value).expression.type,
             lambda(NumberType, NumberType, StringType)
         );
 
         t.ok(typecheck(StringType, value).errors);
 
-        value.arguments[0] = {literal: true, value: '', type: StringType};
+        value = parse(['fn', '', '']);
         t.deepEqual(
-            typecheck(StringType, value).type,
+            typecheck(StringType, value).expression.type,
             lambda(StringType, StringType, StringType)
         );
 
         t.deepEqual(
-            typecheck(lambda(StringType, StringType, StringType), value).type,
+            typecheck(lambda(StringType, StringType, StringType), value).expression.type,
             lambda(StringType, StringType, StringType)
         );
 
         t.deepEqual(
-            typecheck(lambda(typename('T'), typename('T'), StringType), value).type,
+            typecheck(lambda(typename('T'), typename('T'), StringType), value).expression.type,
             lambda(StringType, StringType, StringType)
         );
 
         t.deepEqual(
-            typecheck(lambda(typename('U'), typename('U'), StringType), value).type,
+            typecheck(lambda(typename('U'), typename('U'), StringType), value).expression.type,
             lambda(StringType, StringType, StringType)
         );
 
         t.deepEqual(
-            typecheck(typename('T'), value).type,
+            typecheck(typename('T'), value).expression.type,
             lambda(StringType, StringType, StringType)
         );
 
         t.deepEqual(
-            typecheck(typename('U'), value).type,
+            typecheck(typename('U'), value).expression.type,
             lambda(StringType, StringType, StringType)
         );
 
@@ -148,46 +139,29 @@ test('typecheck expressions', (t) => {
     });
 
     t.test('check value tagged with lambda type having generic input and result type, and a nested generic argument value', (t) => {
-        const value = {
-            literal: false,
-            name: 'fn',
-            type: lambda(typename('T'), typename('T'), StringType),
-            arguments: [{
-                literal: false,
-                name: 'fn2',
-                type: lambda(typename('T'), typename('T')),
-                arguments: [{literal: true, value: '', type: StringType}]
-            }, {literal: true, value: '', type: StringType}],
-            key: '',
-            matchInputs: null
-        };
+        const parse = createParse({
+            fn: lambda(typename('T'), typename('T'), StringType),
+            fn2: lambda(typename('T'), typename('T')),
+            fn3: lambda(typename('U'), typename('U')),
+        });
 
-        const result = typecheck(StringType, value);
+        let value = parse(['fn', ['fn2', ''], '']);
+        const result = typecheck(StringType, value).expression;
         t.deepEqual(result.type, lambda(StringType, StringType, StringType));
-        t.deepEqual(result.arguments[0].type, lambda(StringType, StringType));
+        t.deepEqual(result.args[0].type, lambda(StringType, StringType));
 
-        value.arguments[0] = {
-            literal: false,
-            name: 'fn2',
-            type: lambda(typename('U'), typename('U')),
-            arguments: [{literal: true, value: '', type: StringType}]
-        };
+        value = parse(['fn', ['fn3', ''], '']);
 
         t.deepEqual(
-            typecheck(StringType, value).type,
+            typecheck(StringType, value).expression.type,
             lambda(StringType, StringType, StringType)
         );
 
-        value.arguments[0] = {
-            literal: false,
-            name: 'fn2',
-            type: lambda(typename('U'), typename('U')),
-            arguments: [{literal: true, value: 0, type: NumberType}]
-        };
+        value = parse(['fn', ['fn3', 0], '']);
 
         t.ok(typecheck(StringType, value).errors);
         t.deepEqual(
-            typecheck(NumberType, value).type,
+            typecheck(NumberType, value).expression.type,
             lambda(NumberType, NumberType, StringType)
         );
 
@@ -198,7 +172,6 @@ test('typecheck expressions', (t) => {
 
         t.end();
     });
-
 
     t.end();
 });

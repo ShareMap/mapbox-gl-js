@@ -91,6 +91,7 @@ function compileExpression(
         `);
                 compiled.function = fn.bind(evaluationContext());
             } catch (e) {
+                console.log(JSON.stringify(expr, null, 2))
                 console.log(compiled.js);
                 throw e;
             }

@@ -34,7 +34,7 @@ module.exports = () => ({
         ensure(this.has(obj, key, name), `Property '${key}' not found in ${name || `object with keys: [${Object.keys(obj)}]`}`);
         const val = obj.value[key];
 
-        if (Array.isArray(val)) return this.array('Array', val);
+        if (Array.isArray(val)) return this.array(null, val);
         if (val && typeof val === 'object') return this.object(val);
         return val;
     },
@@ -54,7 +54,8 @@ module.exports = () => ({
     as: function (value, expectedType, name) {
         const type = this.typeOf(value);
         if (expectedType === 'Array') {
-            ensure(type.startsWith('Array'), `Expected ${name || 'value'} to be an array, but found ${type} instead.`);
+            ensure(/Array(<(string|number|boolean)>)?/.test(type),
+                `Expected ${name || 'value'} to be an Array, but found ${type} instead.`);
         } else {
             ensure(type === expectedType, `Expected ${name || 'value'} to be of type ${expectedType}, but found ${type} instead.`);
         }
@@ -95,6 +96,15 @@ module.exports = () => ({
     },
 
     array: function(type, items) {
+        if (!type) {
+            let itemtype;
+            for (const item of items) {
+                if (!itemtype) itemtype = typeof item;
+                else if (itemtype !== typeof item) itemtype = 'Value';
+            }
+            type = (!itemtype || itemtype === 'Value') ?
+                'Array' : `Array<${titlecase(itemtype)}>`;
+        }
         return {type, items};
     },
 

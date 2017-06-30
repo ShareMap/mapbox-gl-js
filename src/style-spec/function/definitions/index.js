@@ -40,8 +40,34 @@ const expressions: { [string]: Class<LambdaExpression> } = {
     'string': defineAssertion('string', StringType),
     'number': defineAssertion('number', NumberType),
     'boolean': defineAssertion('boolean', BooleanType),
-    'array': defineAssertion('array', array(ValueType)),
     'object': defineAssertion('object', ObjectType),
+    'array': class extends LambdaExpression {
+        static getName() { return 'array'; }
+        static getType() { return lambda(array(ValueType), StringType, ValueType); }
+        static parse(args, context) {
+            const types : {[string]:Type} = {
+                string: StringType,
+                number: NumberType,
+                boolean: BooleanType
+            };
+
+            if (args.length === 2 && typeof args[0] === 'string') {
+                const itemType = types[args[0]];
+                if (!itemType)
+                    throw new ParsingError(`${context.key}.1`, `Unsupported array item type ${args[0]}`);
+                const parsed = super.parse(args, context);
+                parsed.type = lambda(array(itemType), StringType, ValueType);
+                return parsed;
+            } else {
+                args = ['Value'].concat(args);
+                return super.parse(args, context);
+            }
+        }
+
+        compile(args) {
+            return { js: `this.as(${args[1].js}, ${JSON.stringify(this.type.result.name)})` };
+        }
+    },
 
     // type coercion
     'to_string': class extends LambdaExpression {
