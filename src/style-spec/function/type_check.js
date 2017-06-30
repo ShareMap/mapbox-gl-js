@@ -18,7 +18,7 @@ export type TypecheckResult = {|
 |}
 
 const assert = require('assert');
-const util = require('../../util/util');
+const extend = require('../util/extend');
 
 const { NullType, lambda, array, variant, nargs } = require('./types');
 
@@ -198,12 +198,12 @@ function match(expected: Type, t: Type, expectedTypenames: { [string]: Type } = 
         if (t === expected) return null;
 
         for (const memberType of expected.members) {
-            const mExpectedTypenames = util.extend({}, expectedTypenames);
-            const mTTypenames = util.extend({}, tTypenames);
+            const mExpectedTypenames = extend({}, expectedTypenames);
+            const mTTypenames = extend({}, tTypenames);
             const error = match(memberType, t, mExpectedTypenames, mTTypenames);
             if (!error) {
-                util.extend(expectedTypenames, mExpectedTypenames);
-                util.extend(tTypenames, mTTypenames);
+                extend(expectedTypenames, mExpectedTypenames);
+                extend(tTypenames, mTTypenames);
                 return null;
             }
         }
