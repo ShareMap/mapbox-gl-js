@@ -14,7 +14,7 @@ const { ParsingError, LiteralExpression, LambdaExpression } = require('../expres
 import type { Expression, CompiledExpression } from '../expression';
 import type { LambdaType } from '../types';
 
-type InterpolationType =
+export type InterpolationType =
     { name: 'step' } |
     { name: 'linear' } |
     { name: 'exponential', base: number }

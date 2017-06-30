@@ -23,6 +23,11 @@ export type CompiledExpression = {|
     function?: Function
 |}
 
+export type ColorValue = {| type: 'Color', value: {} |}
+export type ObjectValue = {| type: 'Object', value: {} |}
+export type ArrayValue = {| type: 'Array', arrayType: string, items: Array<any> |}
+export type Value = null | string | boolean | number | ColorValue | ObjectValue | ArrayValue
+
 const primitiveTypes = {
     string: StringType,
     number: NumberType,
@@ -76,10 +81,10 @@ class BaseExpression {
 }
 
 class LiteralExpression extends BaseExpression {
-    value: any;
-    constructor(key: *, type: PrimitiveType | ArrayType, value: any) {
+    +value: Value;
+    constructor(key: *, type: PrimitiveType | ArrayType, value: Value) {
         super(key, type);
-        this.value = value;
+        (this: any).value = value;
     }
 
     compile() { throw new Error('Unimplemented'); }
@@ -112,8 +117,8 @@ class PrimitiveLiteral extends LiteralExpression {
 
 class ArrayLiteral extends LiteralExpression {
     type: ArrayType;
-    value: Array<any>;
-    constructor(key: *, type: ArrayType, value: Array<any>) {
+    value: ArrayValue;
+    constructor(key: *, type: ArrayType, value: ArrayValue) {
         super(key, type, value);
     }
 
@@ -136,47 +141,35 @@ class ArrayLiteral extends LiteralExpression {
     }
 
     static parse(value: Array<any>, context: ParsingContext) {
+        const arrayType = this.inferArrayType(value);
         return new this(
             context.key,
-            this.inferArrayType(value),
-            value
+            arrayType,
+            {
+                type: 'Array',
+                arrayType: arrayType.name,
+                items: value
+            }
         );
     }
 
-    compile() {
-        const wrapped = {
-            type: this.type.name,
-            items: this.value
-        };
-        return {
-            js: `(${JSON.stringify(wrapped)})`
-        };
-    }
-
-    serialize() { return ['literal', this.value]; }
+    compile() { return { js: `(${JSON.stringify(this.value)})` }; }
+    serialize() { return ['literal', this.value.items]; }
 }
 
 class ObjectLiteral extends LiteralExpression {
-    value: {};
-    constructor(key: *, value: {}) {
+    value: ObjectValue;
+    constructor(key: *, value: ObjectValue) {
         super(key, ObjectType, value);
     }
 
     static parse(value: {}, context: ParsingContext) {
-        return new this(context.key, value);
+        return new this(context.key, {type: 'Object', value});
     }
 
-    compile() {
-        const wrapped = {
-            type: this.type.name,
-            value: this.value
-        };
-        return {
-            js: `(${JSON.stringify(wrapped)})`
-        };
-    }
+    compile() { return { js: `(${JSON.stringify(this.value)})` }; }
 
-    serialize() { return ['literal', this.value]; }
+    serialize() { return ['literal', this.value.value]; }
 }
 
 class LambdaExpression extends BaseExpression {

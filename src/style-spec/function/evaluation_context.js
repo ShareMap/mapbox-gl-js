@@ -1,7 +1,12 @@
+// @flow
+
 const parseColor = require('../util/parse_color');
 const interpolate = require('../util/interpolate');
 const interpolationFactor = require('./interpolation_factor');
 const {ArrayLiteral} = require('./expression');
+
+import type { ArrayValue, ObjectValue, Value } from './expression';
+import type { InterpolationType } from './definitions/curve';
 
 class RuntimeError extends Error {
     constructor(message) {
@@ -17,22 +22,22 @@ class RuntimeError extends Error {
 
 // don't call this 'assert' because build/min.test.js checks for 'assert('
 // in the bundled code to verify that unassertify is working.
-function ensure(condition, message) {
+function ensure(condition: any, message: string) {
     if (!condition) throw new RuntimeError(message);
     return true;
 }
 
 module.exports = () => ({
     ensure: ensure,
-    error: (msg) => ensure(false, msg),
+    error: (msg: string) => ensure(false, msg),
 
-    at: function (index, array) {
+    at: function (index: number, array: ArrayValue) {
         ensure(index < array.items.length, `${array.type} index out of bounds: ${index} > ${array.items.length}.`);
         return array.items[index];
     },
 
-    get: function (obj, key, name) {
-        ensure(this.has(obj, key, name), `Property '${key}' not found in ${name || `object with keys: [${Object.keys(obj)}]`}`);
+    get: function (obj: ObjectValue, key: string, name?: string) {
+        ensure(this.has(obj, key, name), `Property '${key}' not found in ${name || `object with keys: [${Object.keys(obj).join(', ')}]`}`);
         const val = obj.value[key];
 
         if (Array.isArray(val)) return this.array(null, val);
@@ -40,19 +45,22 @@ module.exports = () => ({
         return val;
     },
 
-    has: function (obj, key, name) {
+    has: function (obj: ObjectValue, key: string, name?: string) {
         ensure(obj, `Cannot get property ${key} from null object${name ? ` ${name}` : ''}.`);
         return this.as(obj, 'Object', name).value.hasOwnProperty(key);
     },
 
-    typeOf: function (x) {
+    typeOf: function (x: Value) {
         if (x === null) return 'Null';
-        else if (typeof x === 'object') return x.type;
-        else return titlecase(typeof x);
+        if (typeof x === 'object') {
+            if (x.type === 'Array') return x.arrayType;
+            return x.type;
+        }
+        return titlecase(typeof x);
     },
 
     // type assertion
-    as: function (value, expectedType, name) {
+    as: function (value: Value, expectedType: string, name?: string) {
         const type = this.typeOf(value);
         if (expectedType === 'Array') {
             ensure(/Array(<(string|number|boolean)>)?/.test(type),
@@ -63,7 +71,7 @@ module.exports = () => ({
         return value;
     },
 
-    coalesce: function (...thunks) {
+    coalesce: function (...thunks: Array<Function>) {
         while (true) {
             try {
                 if (thunks.length === 0) return null;
@@ -75,7 +83,7 @@ module.exports = () => ({
         }
     },
 
-    parseColor: function (input) {
+    parseColor: function (input: string) {
         const c = {
             type: 'Color',
             value: parseColor(input)
@@ -84,56 +92,57 @@ module.exports = () => ({
         return c;
     },
 
-    rgba: function (...components) {
+    rgba: function (r: number, g: number, b: number, a?: number) {
         return {
             type: 'Color',
             value: [
-                components[0] / 255,
-                components[1] / 255,
-                components[2] / 255,
-                components.length > 3 ? components[3] : 1
+                r / 255,
+                g / 255,
+                b / 255,
+                typeof a === 'undefined' ? 1 : a
             ]
         };
     },
 
-    array: function(type, items) {
-        if (!type) {
+    array: function(arrayType, items: Array<any>): ArrayValue {
+        if (!arrayType) {
             const t = ArrayLiteral.inferArrayType(items);
-            type = t.name;
+            arrayType = t.name;
         }
-        return {type, items};
+        return {type: 'Array', arrayType, items};
     },
 
-    object: function(value) {
+    object: function(value: {}): ObjectValue {
         return {type: 'Object', value};
     },
 
-    toString: function(value) {
+    toString: function(value: Value) {
         const type = this.typeOf(value);
         ensure(value === null || /^(String|Number|Boolean)$/.test(type), `Expected a primitive value in ["string", ...], but found ${type} instead.`);
         return String(value);
     },
 
-    toNumber: function(value) {
+    toNumber: function(value: Value) {
         const num = Number(value);
         ensure(!isNaN(num), `Could not convert ${JSON.stringify(this.unwrap(value))} to number.`);
         return num;
     },
 
-    unwrap: function (maybeWrapped) {
+    unwrap: function (maybeWrapped: Value) {
         if (!maybeWrapped || typeof maybeWrapped !== 'object')
             return maybeWrapped;
 
-        const type = maybeWrapped.type;
-        if (type === 'Color' || type === 'Object') return maybeWrapped.value;
-        else if (/^Array/.test(type)) return maybeWrapped.items;
+        if (maybeWrapped.type === 'Color' || maybeWrapped.type === 'Object')
+            return maybeWrapped.value;
+        if (maybeWrapped.type === 'Array')
+            return maybeWrapped.items;
 
         // this shouldn't happen; if it does, it's a bug rather than a runtime
         // expression evaluation error
-        throw new Error(`Unknown type ${type}`);
+        throw new Error(`Unrecognized value: ${JSON.stringify(maybeWrapped)}`);
     },
 
-    evaluateCurve(input, stopInputs, stopOutputs, interpolation, resultType) {
+    evaluateCurve(input: number, stopInputs: Array<number>, stopOutputs: Array<Function>, interpolation: InterpolationType, resultType: string) {
         input = this.as(input, 'Number', 'curve input');
 
         const stopCount = stopInputs.length;
