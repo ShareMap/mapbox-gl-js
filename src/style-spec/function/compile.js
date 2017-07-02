@@ -5,8 +5,7 @@ module.exports = compileExpression;
 const {
     parseExpression,
     ParsingContext,
-    ParsingError,
-    LiteralExpression
+    ParsingError
 } = require('./expression');
 const definitions = require('./definitions');
 const typecheck = require('./type_check');
@@ -25,7 +24,6 @@ type CompiledExpression = {|
     function: Function,
     isFeatureConstant: boolean,
     isZoomConstant: boolean,
-    type: Type,
     expression: Expression
 |}
 
@@ -80,14 +78,12 @@ mapProperties = mapProperties || {};
 var props = feature && feature.properties || {};
 return this.unwrap(${compiled})
 `);
-        const type = checked.expression instanceof LiteralExpression ?
-            checked.expression.type : checked.expression.type.result;
+
         return {
             result: 'success',
             function: fn.bind(evaluationContext()),
             isFeatureConstant: isFeatureConstant(checked.expression),
             isZoomConstant: isZoomConstant(checked.expression),
-            type,
             expression: checked.expression
         };
     }

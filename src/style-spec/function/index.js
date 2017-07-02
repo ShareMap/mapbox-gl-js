@@ -4,6 +4,8 @@ const compileExpression = require('./compile');
 const convert = require('./convert');
 const {ColorType, StringType, NumberType, ValueType, array} = require('./types');
 const CurveExpression = require('./definitions/curve');
+const CoalesceExpression = require('./definitions')['coalesce'];
+const {LetExpression} = require('./expression');
 
 function createFunction(parameters, propertySpec) {
     let expr;
@@ -33,7 +35,13 @@ function createFunction(parameters, propertySpec) {
             // our prepopulate-and-interpolate approach to paint properties
             // that are zoom-and-property dependent.
             let curve = compiled.expression;
-            if (!(curve instanceof CurveExpression)) { curve = curve.args[0]; }
+            while (!(curve instanceof CurveExpression)) {
+                if (curve instanceof CoalesceExpression) {
+                    curve = curve.args[0];
+                } else if (curve instanceof LetExpression) {
+                    curve = curve.result;
+                }
+            }
             const curveArgs = [].concat(curve.args);
             const serialized = curve.serialize();
             const interpolation = serialized[1];

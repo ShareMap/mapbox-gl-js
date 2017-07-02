@@ -19,20 +19,53 @@ export type TypecheckResult = {|
 
 const assert = require('assert');
 const extend = require('../util/extend');
-
-const { NullType, lambda, array, variant, nargs } = require('./types');
-
-const { LiteralExpression } = require('./expression');
+const {
+    NullType,
+    lambda,
+    array,
+    variant,
+    nargs,
+    typename
+} = require('./types');
+const {
+    LetExpression,
+    Scope,
+    Reference,
+    LiteralExpression
+} = require('./expression');
 
 module.exports = typeCheckExpression;
 
 // typecheck the given expression and return a new TypedExpression
 // tree with all generics resolved
-function typeCheckExpression(expected: Type, e: Expression) : TypecheckResult {
+function typeCheckExpression(expected: Type, e: Expression, scope: Scope = new Scope()) : TypecheckResult {
     if (e instanceof LiteralExpression) {
         const error = match(expected, e.type);
         if (error) return { result: 'error', errors: [{ key: e.key, error }] };
         return {result: 'success', expression: e};
+    } else if (e instanceof Reference) {
+        const referee = scope.get(e.name);
+        const error = match(expected, referee.type);
+        if (error) return { result: 'error', errors: [{key: e.key, error }] };
+        return {
+            result: 'success',
+            expression: new Reference(e.key, e.name, referee.type)
+        };
+    } else if (e instanceof LetExpression) {
+        const bindings = {};
+        for (const name in e.scope.bindings) {
+            const value = e.scope.bindings[name];
+            const checkedValue = typeCheckExpression(typename('T'), value, scope);
+            if (checkedValue.result === 'error') return checkedValue;
+            bindings[name] = checkedValue.expression;
+        }
+        const nextScope = scope.concat(bindings);
+        const checkedResult = typeCheckExpression(expected, e.result, nextScope);
+        if (checkedResult.result === 'error') return checkedResult;
+        return {
+            result: 'success',
+            expression: new LetExpression(e.key, e.names, nextScope, checkedResult.expression)
+        };
     } else {
         // e is a lambda expression, so check its result type against the
         // expected type and recursively typecheck its arguments
@@ -88,7 +121,10 @@ function typeCheckExpression(expected: Type, e: Expression) : TypecheckResult {
         //  - collect typename mappings when ^ succeeds or type errors when it fails
         for (let i = 0; i < argValues.length; i++) {
             const param = expandedParams[i];
-            const arg = argValues[i];
+            let arg = argValues[i];
+            if (arg instanceof Reference) {
+                arg = scope.get(arg.name);
+            }
             const error = match(
                 resolveTypenamesIfPossible(param, typenames),
                 arg.type,
@@ -115,7 +151,7 @@ function typeCheckExpression(expected: Type, e: Expression) : TypecheckResult {
             const t = expandedParams[i];
             const arg = argValues[i];
             const expected = resolveTypenamesIfPossible(t, typenames);
-            const checked = typeCheckExpression(expected, arg);
+            const checked = typeCheckExpression(expected, arg, scope);
             if (checked.result === 'error') {
                 errors.push.apply(errors, checked.errors);
             } else if (errors.length === 0) {

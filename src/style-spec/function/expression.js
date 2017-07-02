@@ -4,7 +4,8 @@ const {
     NullType,
     StringType,
     NumberType,
-    BooleanType
+    BooleanType,
+    typename
 } = require('./types');
 
 const {Color, isValue, typeOf} = require('./values');
@@ -13,7 +14,7 @@ import type { Value }  from './values';
 import type { Type, LambdaType } from './types';
 import type { ExpressionName } from './expression_name';
 
-export type Expression = LambdaExpression | LiteralExpression; // eslint-disable-line no-use-before-define
+export type Expression = LambdaExpression | LiteralExpression | LetExpression | Reference; // eslint-disable-line no-use-before-define
 
 export type CompileError = {|
     error: string,
@@ -28,24 +29,49 @@ class ParsingError extends Error {
     }
 }
 
+class Scope {
+    parent: ?Scope;
+    bindings: {[string]: Expression};
+    constructor(parent?: Scope, bindings: {[string]: Expression} = {}) {
+        this.parent = parent;
+        this.bindings = bindings;
+    }
+
+    concat(bindings: {[string]: Expression}) {
+        return new Scope(this, bindings);
+    }
+
+    get(name: string): Expression {
+        if (this.bindings[name]) { return this.bindings[name]; }
+        if (this.parent) { return this.parent.get(name); }
+        throw new Error(`${name} not found in scope.`);
+    }
+
+    has(name: string): boolean {
+        if (this.bindings[name]) return true;
+        return this.parent ? this.parent.has(name) : false;
+    }
+}
+
 class ParsingContext {
     key: string;
     path: Array<number>;
     ancestors: Array<string>;
     definitions: {[string]: Class<LambdaExpression>};
-    constructor(definitions: *, path: * = [], ancestors: * = []) {
+    scope: Scope;
+    constructor(definitions: *, path: Array<number> = [], ancestors: * = [], scope: Scope = new Scope()) {
         this.definitions = definitions;
         this.path = path;
         this.key = path.join('.');
         this.ancestors = ancestors;
+        this.scope = scope;
     }
 
-    concat(index: number, expressionName: ?string) {
-        return new ParsingContext(
-            this.definitions,
-            this.path.concat(index),
-            expressionName ? this.ancestors.concat(expressionName) : this.ancestors
-        );
+    concat(index?: number, expressionName?: string, bindings?: {[string]: Expression}) {
+        const path = typeof index === 'number' ? this.path.concat(index) : this.path;
+        const ancestors = expressionName ? this.ancestors.concat(expressionName) : this.ancestors;
+        const scope = bindings ? this.scope.concat(bindings) : this.scope;
+        return new ParsingContext(this.definitions, path, ancestors, scope);
     }
 }
 
@@ -55,6 +81,10 @@ class BaseExpression {
     constructor(key: *, type: *) {
         this.key = key;
         (this: any).type = type;
+    }
+
+    getResultType() {
+        return this.type.kind === 'lambda' ? this.type.result : this.type;
     }
 
     compile(): string | Array<CompileError> {
@@ -168,6 +198,103 @@ class LambdaExpression extends BaseExpression {
     }
 }
 
+class Reference extends BaseExpression {
+    name: string;
+    constructor(key: string, name: string, type: Type) {
+        super(key, type);
+        if (!/^[a-zA-Z_]+[a-zA-Z_0-9]*$/.test(name))
+            throw new ParsingError(key, `Invalid identifier ${name}.`);
+        this.name = name;
+    }
+
+    compile() { return this.name; }
+
+    serialize(_: boolean) {
+        return [this.name];
+    }
+}
+
+class LetExpression extends BaseExpression {
+    names: Array<string>;
+    scope: Scope;
+    result: Expression;
+    constructor(key: string, names: Array<string>, scope: Scope, result: Expression) {
+        super(key, result.type);
+        this.names = names;
+        this.scope = scope;
+        this.result = result;
+    }
+
+    compile() {
+        const names = [];
+        const values = [];
+        const errors = [];
+        for (const name in this.scope.bindings) {
+            names.push(name);
+            const value = this.scope.bindings[name].compile();
+            if (Array.isArray(value)) {
+                errors.push.apply(errors, value);
+            } else {
+                values.push(value);
+            }
+        }
+
+        const result = this.result.compile();
+        if (Array.isArray(result)) {
+            errors.push.apply(errors, result);
+            return errors;
+        }
+
+        if (errors.length > 0) return errors;
+
+        return `(function (${names.join(', ')}) {
+            return ${result};
+        }.bind(this))(${values.join(', ')})`;
+    }
+
+    serialize(withTypes: boolean) {
+        const serialized = ['let'];
+        for (const name of this.names) {
+            serialized.push(name, this.scope.get(name).serialize(withTypes));
+        }
+        serialized.push(this.result.serialize(withTypes));
+        return serialized;
+    }
+
+    visit(fn: (BaseExpression) => void): void {
+        fn(this);
+        for (const name in this.scope.bindings) {
+            this.scope.get(name).visit(fn);
+        }
+        this.result.visit(fn);
+    }
+
+    static parse(args: Array<mixed>, context: ParsingContext) {
+        if (args.length < 3)
+            throw new ParsingError(context.key, `Expected at least 3 arguments, but found ${args.length} instead.`);
+
+        const bindings: {[string]: Expression} = {};
+        const names = [];
+        for (let i = 0; i < args.length - 1; i += 2) {
+            const name = args[i];
+            const key = context.path.concat(i + 1).join('.');
+            if (typeof name !== 'string')
+                throw new ParsingError(key, `Expected string, but found ${typeof name} instead`);
+
+            if (context.definitions[name])
+                throw new ParsingError(key, `"${name}" is reserved, so it cannot not be used as a "let" binding.`);
+
+            const value = parseExpression(args[i + 1], context.concat(i + 2, 'let.binding'));
+
+            bindings[name] = value;
+            names.push(name);
+        }
+        const resultContext = context.concat(args.length, 'let.result', bindings);
+        const result = parseExpression(args[args.length - 1], resultContext);
+        return new this(context.key, names, resultContext.scope, result);
+    }
+}
+
 function parseExpression(expr: mixed, context: ParsingContext) : Expression {
     const key = context.key;
 
@@ -189,18 +316,18 @@ function parseExpression(expr: mixed, context: ParsingContext) : Expression {
         const op = expr[0];
         if (typeof op !== 'string') {
             throw new ParsingError(`${key}.0`, `Expression name must be a string, but found ${typeof op} instead. If you wanted a literal array, use ["literal", [...]].`);
-        }
-
-        if (op === 'literal') {
+        } else if (op === 'literal') {
             return LiteralExpression.parse(expr.slice(1), context);
+        } else if (op === 'let') {
+            return LetExpression.parse(expr.slice(1), context);
+        } else if (context.scope.has(op)) {
+            return new Reference(context.key, op, typename('T'));
         }
 
         const Expr = context.definitions[op];
-        if (!Expr) {
-            throw new ParsingError(`${key}.0`, `Unknown expression "${op}". If you wanted a literal array, use ["literal", [...]].`);
-        }
+        if (Expr) return Expr.parse(expr.slice(1), context);
 
-        return Expr.parse(expr.slice(1), context);
+        throw new ParsingError(`${key}.0`, `Unknown expression "${op}". If you wanted a literal array, use ["literal", [...]].`);
     } else if (typeof expr === 'object') {
         throw new ParsingError(key, `Bare objects invalid. Use ["literal", {...}] instead.`);
     } else {
@@ -209,9 +336,12 @@ function parseExpression(expr: mixed, context: ParsingContext) : Expression {
 }
 
 module.exports = {
+    Scope,
     ParsingContext,
     ParsingError,
     parseExpression,
     LiteralExpression,
-    LambdaExpression
+    LambdaExpression,
+    LetExpression,
+    Reference
 };

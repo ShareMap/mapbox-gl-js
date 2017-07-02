@@ -1,0 +1,18 @@
+{
+  "expression": [
+    "let",
+    "zoom", 1,
+    ["zoom"]
+  ],
+  "expected": {
+    "compileResult": {
+      "result": "error",
+      "errors": [
+        {
+          "error": "\"zoom\" is reserved, so it cannot not be used as a \"let\" binding.",
+          "key": "1"
+        }
+      ]
+    }
+  }
+}

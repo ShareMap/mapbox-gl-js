@@ -185,10 +185,10 @@ const expressions: { [string]: Class<LambdaExpression> } = {
             const ancestors = context.ancestors.join(':');
             // zoom expressions may only appear like:
             // ['curve', interp, ['zoom'], ...]
-            // or ['coalesce', ['curve', interp, ['zoom'], ...], ... ]
+            // or ['let', ..., ['coalesce', ['curve', interp, ['zoom'], ...], ... ] ]
             if (
-                !/^(1.)?2/.test(context.key) ||
-                !/(coalesce:)?curve/.test(ancestors)
+                !/(^|[^0-9])2$/.test(context.key) ||
+                !/^(let\.result:|coalesce:)*curve$/.test(ancestors)
             ) {
                 throw new ParsingError(
                     context.key,
