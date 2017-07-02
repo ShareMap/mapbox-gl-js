@@ -1,5 +1,6 @@
 // @flow
 
+const assert = require('assert');
 const {
     NullType,
     NumberType,
@@ -11,7 +12,7 @@ const {
 
 const { ParsingError, LiteralExpression, LambdaExpression } = require('../expression');
 
-import type { Expression, CompiledExpression } from '../expression';
+import type { Expression } from '../expression';
 import type { LambdaType } from '../types';
 
 export type InterpolationType =
@@ -71,59 +72,60 @@ class CurveExpression extends LambdaExpression {
         return new this.constructor(this.key, type, args, this.interpolation);
     }
 
-    compile(args: Array<CompiledExpression>) {
-        if (args.length < 4) return {
-            errors: [`Expected at least four arguments, but found only ${args.length}.`]
-        };
+    compileFromArgs(compiledArgs: Array<string>) {
+        assert(this.args.length === compiledArgs.length);
+        if (compiledArgs.length < 4) return [{
+            key: this.key,
+            error: `Expected at least four arguments, but found only ${compiledArgs.length}.`
+        }];
 
-        const firstOutput = args[3];
+        let firstOutputType = this.args[3].type;
+        if (firstOutputType.kind === 'lambda') {
+            firstOutputType = firstOutputType.result;
+        }
         let resultType;
-        if (firstOutput.type === NumberType) {
+        if (firstOutputType === NumberType) {
             resultType = 'number';
-        } else if (firstOutput.type === ColorType) {
+        } else if (firstOutputType === ColorType) {
             resultType = 'color';
         } else if (
-            firstOutput.type.kind === 'array' &&
-            firstOutput.type.itemType === NumberType
+            firstOutputType.kind === 'array' &&
+            firstOutputType.itemType === NumberType
         ) {
             resultType = 'array';
         } else if (this.interpolation.name !== 'step') {
-            return {
-                errors: [`Type ${firstOutput.type.name} is not interpolatable, and thus cannot be used as a ${this.interpolation.name} curve's output type.`]
-            };
+            return [{
+                key: this.args[3].key,
+                error: `Type ${firstOutputType.name} is not interpolatable, and thus cannot be used as a ${this.interpolation.name} curve's output type.`
+            }];
         }
 
         const stops = [];
         const outputs = [];
-        for (let i = 2; (i + 1) < args.length; i += 2) {
-            const input = args[i].expression;
-            const output = args[i + 1];
+        for (let i = 2; (i + 1) < this.args.length; i += 2) {
+            const input = this.args[i];
             if (
                 !(input instanceof LiteralExpression) ||
                 typeof input.value !== 'number'
             ) {
-                return {
-                    errors: [ 'Input/output pairs for "curve" expressions must be defined using literal numeric values (not computed expressions) for the input values.' ]
-                };
+                return [{ key: this.args[i].key, error: 'Input/output pairs for "curve" expressions must be defined using literal numeric values (not computed expressions) for the input values.' }];
             }
 
             if (stops.length && stops[stops.length - 1] > input.value) {
-                return {
-                    errors: [ 'Input/output pairs for "curve" expressions must be arranged with input values in strictly ascending order.' ]
-                };
+                return [{ key: this.args[i].key, error: 'Input/output pairs for "curve" expressions must be arranged with input values in strictly ascending order.' }];
             }
 
             stops.push(input.value);
-            outputs.push(output.js);
+
+            outputs.push(compiledArgs[i + 1]);
         }
 
-        return {js: `
-        (function () {
-            var input = ${args[1].js};
+        return `(function () {
+            var input = ${compiledArgs[1]};
             var stopInputs = [${stops.join(', ')}];
             var stopOutputs = [${outputs.map(o => `() => ${o}`).join(', ')}];
             return this.evaluateCurve(input, stopInputs, stopOutputs, ${JSON.stringify(this.interpolation)}, ${JSON.stringify(resultType)});
-        }.bind(this))()`};
+        }.bind(this))()`;
     }
 }
 

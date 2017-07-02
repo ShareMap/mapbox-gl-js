@@ -1,30 +1,32 @@
 // @flow
 
-const assert = require('assert');
-
 module.exports = compileExpression;
 
 const {
-    LiteralExpression,
     parseExpression,
     ParsingContext,
-    ParsingError
+    ParsingError,
+    LiteralExpression
 } = require('./expression');
-const expressions = require('./definitions');
+const definitions = require('./definitions');
 const typecheck = require('./type_check');
 const evaluationContext = require('./evaluation_context');
 
 import type { Type } from './types.js';
-import type { Expression, CompiledExpression } from './expression.js';
-
-type CompileError = {|
-    error: string,
-    key: string
-|}
+import type { Expression, CompileError } from './expression.js';
 
 type CompileErrors = {|
     result: 'error',
     errors: Array<CompileError>
+|}
+
+type CompiledExpression = {|
+    result: 'success',
+    function: Function,
+    isFeatureConstant: boolean,
+    isZoomConstant: boolean,
+    type: Type,
+    expression: Expression
 |}
 
 /**
@@ -35,7 +37,6 @@ type CompileErrors = {|
  *   result: 'success',
  *   isFeatureConstant: boolean,
  *   isZoomConstant: boolean,
- *   js: string,
  *   function: Function
  * }
  * ```
@@ -53,10 +54,10 @@ type CompileErrors = {|
 function compileExpression(
     expr: mixed,
     expectedType?: Type
-) {
+): CompiledExpression | CompileErrors {
     let parsed;
     try {
-        parsed = parseExpression(expr, new ParsingContext(expressions));
+        parsed = parseExpression(expr, new ParsingContext(definitions));
     } catch (e) {
         if (e instanceof ParsingError) {
             return {
@@ -67,85 +68,58 @@ function compileExpression(
         throw e;
     }
 
-    if (parsed.type) {
-        const checked = typecheck(expectedType || parsed.type, parsed);
-        if (checked.result === 'error') {
-            return checked;
-        }
-
-        const compiled = compile(null, checked.expression);
-        if (compiled.result === 'success') {
-            const fn = new Function('mapProperties', 'feature', `
-    mapProperties = mapProperties || {};
-    var props = feature && feature.properties || {};
-    return this.unwrap(${compiled.js})
-    `);
-            compiled.function = fn.bind(evaluationContext());
-        }
-
-        return compiled;
+    const checked = typecheck(expectedType || parsed.type, parsed);
+    if (checked.result === 'error') {
+        return checked;
     }
 
-    assert(false, 'parseExpression should always return either error or typed expression');
-}
-
-function compile(expected: Type | null, e: Expression) : CompiledExpression | CompileErrors {
-    if (e instanceof LiteralExpression) {
+    const compiled = checked.expression.compile();
+    if (typeof compiled === 'string') {
+        const fn = new Function('mapProperties', 'feature', `
+mapProperties = mapProperties || {};
+var props = feature && feature.properties || {};
+return this.unwrap(${compiled})
+`);
+        const type = checked.expression instanceof LiteralExpression ?
+            checked.expression.type : checked.expression.type.result;
         return {
             result: 'success',
-            js: e.compile().js,
-            type: e.type,
-            isFeatureConstant: true,
-            isZoomConstant: true,
-            expression: e
-        };
-    } else {
-        const errors: Array<CompileError> = [];
-        const compiledArgs: Array<CompiledExpression> = [];
-
-        for (let i = 0; i < e.args.length; i++) {
-            const arg = e.args[i];
-            const param = e.type.params[i];
-            const compiledArg = compile(param, arg);
-            if (compiledArg.result === 'error') {
-                errors.push.apply(errors, compiledArg.errors);
-            } else if (compiledArg.result === 'success') {
-                compiledArgs.push(compiledArg);
-            }
-        }
-
-        if (errors.length > 0) {
-            return { result: 'error', errors };
-        }
-
-        let isFeatureConstant = compiledArgs.reduce((memo, arg) => memo && arg.isFeatureConstant, true);
-        let isZoomConstant = compiledArgs.reduce((memo, arg) => memo && arg.isZoomConstant, true);
-
-        const compiled = e.compile(compiledArgs);
-        if (compiled.errors) {
-            return {
-                result: 'error',
-                errors: compiled.errors.map(message => ({ error: message, key: e.key }))
-            };
-        }
-
-        if (typeof compiled.isFeatureConstant === 'boolean') {
-            isFeatureConstant = isFeatureConstant && compiled.isFeatureConstant;
-        }
-        if (typeof compiled.isZoomConstant === 'boolean') {
-            isZoomConstant = isZoomConstant && compiled.isZoomConstant;
-        }
-
-        assert(compiled.js);
-
-        return {
-            result: 'success',
-            js: `(${compiled.js || 'void 0'})`, // `|| void 0` is to satisfy flow
-            type: e.type.result,
-            isFeatureConstant,
-            isZoomConstant,
-            expression: e
+            function: fn.bind(evaluationContext()),
+            isFeatureConstant: isFeatureConstant(checked.expression),
+            isZoomConstant: isZoomConstant(checked.expression),
+            type,
+            expression: checked.expression
         };
     }
+
+    return {
+        result: 'error',
+        errors: compiled
+    };
 }
 
+function isFeatureConstant(e: Expression) {
+    let result = true;
+    e.visit((expression) => {
+        if (expression instanceof definitions['get']) {
+            result = result && (expression.args.length > 1);
+        } else if (expression instanceof definitions['has']) {
+            result = result && (expression.args.length > 1);
+        } else {
+            result = result && !(
+                expression instanceof definitions['properties'] ||
+                expression instanceof definitions['geometry_type'] ||
+                expression instanceof definitions['id']
+            );
+        }
+    });
+    return result;
+}
+
+function isZoomConstant(e: Expression) {
+    let result = true;
+    e.visit((expression) => {
+        if (expression instanceof definitions['zoom']) result = false;
+    });
+    return result;
+}

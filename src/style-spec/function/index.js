@@ -3,6 +3,7 @@ const assert = require('assert');
 const compileExpression = require('./compile');
 const convert = require('./convert');
 const {ColorType, StringType, NumberType, ValueType, array} = require('./types');
+const CurveExpression = require('./definitions/curve');
 
 function createFunction(parameters, propertySpec) {
     let expr;
@@ -32,7 +33,7 @@ function createFunction(parameters, propertySpec) {
             // our prepopulate-and-interpolate approach to paint properties
             // that are zoom-and-property dependent.
             let curve = compiled.expression;
-            if (curve.name !== 'curve') { curve = curve.args[0]; }
+            if (!(curve instanceof CurveExpression)) { curve = curve.args[0]; }
             const curveArgs = [].concat(curve.args);
             const serialized = curve.serialize();
             const interpolation = serialized[1];

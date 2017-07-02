@@ -15,8 +15,6 @@ const {
     ParsingError
 } = require('../expression');
 
-import type { CompiledExpression } from '../expression.js';
-
 class MatchExpression extends LambdaExpression {
     constructor(key: *, type: *, args: *) {
         super(key, type, args);
@@ -61,21 +59,21 @@ class MatchExpression extends LambdaExpression {
         return super.parse(normalizedArgs, context);
     }
 
-    compile(args: Array<CompiledExpression>) {
-        const input = args[0].js;
+    compileFromArgs(compiledArgs: Array<string>) {
+        const input = compiledArgs[0];
         const inputs: Array<LiteralExpression> = [];
         const outputs = [];
-        for (let i = 1; i < args.length - 1; i++) {
+        for (let i = 1; i < this.args.length - 1; i++) {
             if (i % 2 === 1) {
-                assert(args[i].expression instanceof LiteralExpression);
-                inputs.push((args[i].expression : any));
+                assert(this.args[i] instanceof LiteralExpression);
+                inputs.push((this.args[i] : any));
             } else {
-                outputs.push(`() => ${args[i].js}`);
+                outputs.push(`() => ${compiledArgs[i]}`);
             }
         }
 
         // 'otherwise' case
-        outputs.push(`() => ${args[args.length - 1].js}`);
+        outputs.push(`() => ${compiledArgs[compiledArgs.length - 1]}`);
 
         // Construct a hash from input values (tagged with their type, to
         // distinguish e.g. 0 from "0") to the index of the corresponding
@@ -91,15 +89,14 @@ class MatchExpression extends LambdaExpression {
             }
         }
 
-        return {js: `
-        (function () {
+        return `(function () {
             var outputs = [${outputs.join(', ')}];
             var inputMap = ${JSON.stringify(inputMap)};
             var input = ${input};
             var outputIndex = inputMap[this.typeOf(input).toLowerCase() + '-' + input];
             return typeof outputIndex === 'number' ? outputs[outputIndex]() :
                 outputs[${outputs.length - 1}]();
-        }.bind(this))()`};
+        }.bind(this))()`;
     }
 }
 

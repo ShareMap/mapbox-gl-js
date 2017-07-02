@@ -21,9 +21,8 @@ const { parseExpression, ParsingError, LambdaExpression } = require('../expressi
 const MatchExpression = require('./match');
 const CurveExpression = require('./curve');
 
-import type { Type } from '../types.js';
-import type { ExpressionName } from '../expression_name.js';
-import type { CompiledExpression } from '../expression.js';
+import type { Type } from '../types';
+import type { ExpressionName } from '../expression_name';
 
 const expressions: { [string]: Class<LambdaExpression> } = {
     'ln2': defineMathConstant('ln2'),
@@ -33,7 +32,7 @@ const expressions: { [string]: Class<LambdaExpression> } = {
     'typeof': class TypeOf extends LambdaExpression {
         static getName() { return 'typeOf'; }
         static getType() { return lambda(StringType, ValueType); }
-        compile(args) { return fromContext('typeOf', args); }
+        compileFromArgs(args) { return fromContext('typeOf', args); }
     },
 
     // type assertions
@@ -74,8 +73,8 @@ const expressions: { [string]: Class<LambdaExpression> } = {
             );
         }
 
-        compile(args) {
-            return { js: `this.as(${args[args.length - 1].js}, ${JSON.stringify(this.type.result.name)})` };
+        compileFromArgs(args) {
+            return `this.as(${args[args.length - 1]}, ${JSON.stringify(this.type.result.name)})`;
         }
     },
 
@@ -83,29 +82,29 @@ const expressions: { [string]: Class<LambdaExpression> } = {
     'to_string': class extends LambdaExpression {
         static getName() { return 'to_string'; }
         static getType() { return lambda(StringType, ValueType); }
-        compile(args) {
-            return {js: `this.toString(${args[0].js})`};
+        compileFromArgs(args) {
+            return `this.toString(${args[0]})`;
         }
     },
     'to_number': class extends LambdaExpression {
         static getName() { return 'to_number'; }
         static getType() { return lambda(NumberType, ValueType); }
-        compile(args) {
-            return {js: `this.toNumber(${args[0].js})`};
+        compileFromArgs(args) {
+            return `this.toNumber(${args[0]})`;
         }
     },
     'to_boolean': class extends LambdaExpression {
         static getName() { return 'to_boolean'; }
         static getType() { return lambda(BooleanType, ValueType); }
-        compile(args) {
-            return {js: `Boolean(${args[0].js})`};
+        compileFromArgs(args) {
+            return `Boolean(${args[0]})`;
         }
     },
     'to_rgba': class extends LambdaExpression {
         static getName() { return 'to_rgba'; }
         static getType() { return lambda(array(NumberType, 4), ColorType); }
-        compile(args) {
-            return {js: `${args[0].js}.value`};
+        compileFromArgs(args) {
+            return `${args[0]}.value`;
         }
     },
 
@@ -113,53 +112,47 @@ const expressions: { [string]: Class<LambdaExpression> } = {
     'parse_color': class extends LambdaExpression {
         static getName() { return 'parse_color'; }
         static getType() { return lambda(ColorType, StringType); }
-        compile(args) { return fromContext('parseColor', args); }
+        compileFromArgs(args) { return fromContext('parseColor', args); }
     },
     'rgb': class extends LambdaExpression {
         static getName() { return 'rgb'; }
         static getType() { return lambda(ColorType, NumberType, NumberType, NumberType); }
-        compile(args) { return fromContext('rgba', args); }
+        compileFromArgs(args) { return fromContext('rgba', args); }
     },
     'rgba': class extends LambdaExpression {
         static getName() { return 'rgb'; }
         static getType() { return lambda(ColorType, NumberType, NumberType, NumberType, NumberType); }
-        compile(args) { return fromContext('rgba', args); }
+        compileFromArgs(args) { return fromContext('rgba', args); }
     },
 
     // object/array access
     'get': class extends LambdaExpression {
         static getName() { return 'get'; }
         static getType() { return lambda(ValueType, StringType, nargs(1, ObjectType)); }
-        compile(args) {
-            return {
-                js: `this.get(${args.length > 1 ? args[1].js : 'props'}, ${args[0].js}, ${args.length > 1 ? 'undefined' : '"feature.properties"'})`,
-                isFeatureConstant: args.length > 1 && args[1].isFeatureConstant
-            };
+        compileFromArgs(args) {
+            return `this.get(${args.length > 1 ? args[1] : 'props'}, ${args[0]}, ${args.length > 1 ? 'undefined' : '"feature.properties"'})`;
         }
     },
     'has': class extends LambdaExpression {
         static getName() { return 'has'; }
         static getType() { return lambda(BooleanType, StringType, nargs(1, ObjectType)); }
-        compile(args) {
-            return {
-                js: `this.has(${args.length > 1 ? args[1].js : 'props'}, ${args[0].js}, ${args.length > 1 ? 'undefined' : '"feature.properties"'})`,
-                isFeatureConstant: args.length > 1 && args[1].isFeatureConstant
-            };
+        compileFromArgs(args) {
+            return `this.has(${args.length > 1 ? args[1] : 'props'}, ${args[0]}, ${args.length > 1 ? 'undefined' : '"feature.properties"'})`;
         }
     },
     'at': class extends LambdaExpression {
         static getName() { return 'at'; }
         static getType() { return lambda(typename('T'), NumberType, array(typename('T'))); }
-        compile(args) { return fromContext('at', args); }
+        compileFromArgs(args) { return fromContext('at', args); }
     },
     'length': class extends LambdaExpression {
         static getName() { return 'length'; }
         static getType() { return lambda(NumberType, variant(array(typename('T')), StringType)); }
-        compile(args) {
-            let t = args[0].type;
+        compileFromArgs(compiledArgs) {
+            let t = this.args[0].type;
             if (t.kind === 'lambda') { t = t.result; }
             assert(t.kind === 'array' || t.kind === 'primitive');
-            return { js: `${args[0].js}.length` };
+            return `${compiledArgs[0]}.length`;
         }
     },
 
@@ -168,30 +161,21 @@ const expressions: { [string]: Class<LambdaExpression> } = {
         static getName() { return 'properties'; }
         static getType() { return lambda(ObjectType); }
         compile() {
-            return {
-                js: 'this.as(props, "Object", "feature.properties")',
-                isFeatureConstant: false
-            };
+            return 'this.as(props, "Object", "feature.properties")';
         }
     },
     'geometry_type': class extends LambdaExpression {
         static getName() { return 'geometry_type'; }
         static getType() { return lambda(StringType); }
         compile() {
-            return {
-                js: 'this.get(this.get(feature, "geometry", "feature"), "type", "feature.geometry")',
-                isFeatureConstant: false
-            };
+            return 'this.get(this.get(feature, "geometry", "feature"), "type", "feature.geometry")';
         }
     },
     'id': class extends LambdaExpression {
         static getName() { return 'id'; }
         static getType() { return lambda(ValueType); }
         compile() {
-            return {
-                js: 'this.get(feature, "id", "feature")',
-                isFeatureConstant: false
-            };
+            return 'this.get(feature, "id", "feature")';
         }
     },
     'zoom': class extends LambdaExpression {
@@ -214,7 +198,7 @@ const expressions: { [string]: Class<LambdaExpression> } = {
             return super.parse(args, context);
         }
         compile() {
-            return {js: 'mapProperties.zoom', isZoomConstant: false};
+            return 'mapProperties.zoom';
         }
     },
 
@@ -227,8 +211,8 @@ const expressions: { [string]: Class<LambdaExpression> } = {
     '^': class extends LambdaExpression {
         static getName() { return '^'; }
         static getType() { return lambda(NumberType, NumberType, NumberType); }
-        compile(args) {
-            return {js: `Math.pow(${args[0].js}, ${args[1].js})`};
+        compileFromArgs(args) {
+            return `Math.pow(${args[0]}, ${args[1]})`;
         }
     },
     'log10': defineMathFunction('log10', 1),
@@ -251,8 +235,8 @@ const expressions: { [string]: Class<LambdaExpression> } = {
     '!': class extends LambdaExpression {
         static getName() { return '!'; }
         static getType() { return lambda(BooleanType, BooleanType); }
-        compile(args) {
-            return {js: `!(${args[0].js})`};
+        compileFromArgs(args) {
+            return `!(${args[0]})`;
         }
     },
 
@@ -260,22 +244,22 @@ const expressions: { [string]: Class<LambdaExpression> } = {
     'upcase': class extends LambdaExpression {
         static getName() { return 'upcase'; }
         static getType() { return lambda(StringType, StringType); }
-        compile(args) {
-            return {js: `(${args[0].js}).toUpperCase()`};
+        compileFromArgs(args) {
+            return `(${args[0]}).toUpperCase()`;
         }
     },
     'downcase': class extends LambdaExpression {
         static getName() { return 'downcase'; }
         static getType() { return lambda(StringType, StringType); }
-        compile(args) {
-            return {js: `(${args[0].js}).toLowerCase()`};
+        compileFromArgs(args) {
+            return `(${args[0]}).toLowerCase()`;
         }
     },
     'concat': class extends LambdaExpression {
         static getName() { return 'concat'; }
         static getType() { return lambda(StringType, nargs(Infinity, ValueType)); }
-        compile(args) {
-            return {js: `[${args.map(a => a.js).join(', ')}].join('')`};
+        compileFromArgs(args) {
+            return `[${args.join(', ')}].join('')`;
         }
     },
 
@@ -283,16 +267,15 @@ const expressions: { [string]: Class<LambdaExpression> } = {
     'case': class extends LambdaExpression {
         static getName() { return 'case'; }
         static getType() { return lambda(typename('T'), nargs(Infinity, BooleanType, typename('T')), typename('T')); }
-        compile(args) {
-            args = [].concat(args);
+        compileFromArgs(args) {
             const result = [];
             while (args.length > 1) {
                 const c = args.splice(0, 2);
-                result.push(`${c[0].js} ? ${c[1].js}`);
+                result.push(`${c[0]} ? ${c[1]}`);
             }
             assert(args.length === 1); // enforced by type checking
-            result.push(args[0].js);
-            return { js: result.join(':') };
+            result.push(args[0]);
+            return result.join(':');
         }
     },
     'match': MatchExpression,
@@ -300,10 +283,8 @@ const expressions: { [string]: Class<LambdaExpression> } = {
     'coalesce': class extends LambdaExpression {
         static getName() { return 'coalesce'; }
         static getType() { return lambda(typename('T'), nargs(Infinity, typename('T'))); }
-        compile(args) {
-            return {
-                js: `this.coalesce(${args.map(a => `() => ${a.js}`).join(', ')})`
-            };
+        compileFromArgs(args) {
+            return `this.coalesce(${args.map(a => `() => ${a}`).join(', ')})`;
         }
     },
 
@@ -318,7 +299,7 @@ function defineMathConstant(name) {
     return class extends LambdaExpression {
         static getName() { return name; }
         static getType() { return lambda(NumberType); }
-        compile() { return { js: `Math.${mathName}` }; }
+        compile() { return `Math.${mathName}`; }
     };
 }
 
@@ -331,8 +312,8 @@ function defineMathFunction(name: ExpressionName, arity: number, mathName?: stri
     return class extends LambdaExpression {
         static getName() { return name; }
         static getType() { return lambda(NumberType, ...args); }
-        compile(args) {
-            return { js: `Math.${key}(${args.map(a => a.js).join(', ')})` };
+        compileFromArgs(args) {
+            return `Math.${key}(${args.join(', ')})`;
         }
     };
 }
@@ -342,8 +323,8 @@ function defineBinaryMathOp(name, isAssociative) {
     return class extends LambdaExpression {
         static getName() { return name; }
         static getType() { return lambda(NumberType, ...args); }
-        compile(args) {
-            return { js: `${args.map(a => a.js).join(name)}` };
+        compileFromArgs(args) {
+            return args.join(name);
         }
     };
 }
@@ -354,8 +335,8 @@ function defineComparisonOp(name) {
     return class extends LambdaExpression {
         static getName() { return name; }
         static getType() { return lambda(BooleanType, typename('T'), typename('T')); }
-        compile(args) {
-            return { js: `${args[0].js} ${op} ${args[1].js}` };
+        compileFromArgs(args) {
+            return `${args[0]} ${op} ${args[1]}`;
         }
     };
 }
@@ -364,8 +345,8 @@ function defineBooleanOp(op) {
     return class extends LambdaExpression {
         static getName() { return op; }
         static getType() { return lambda(BooleanType, nargs(Infinity, BooleanType)); }
-        compile(args) {
-            return { js: `${args.map(a => a.js).join(op)}` };
+        compileFromArgs(args) {
+            return `${args.join(op)}`;
         }
     };
 }
@@ -374,14 +355,13 @@ function defineAssertion(name: ExpressionName, type: Type) {
     return class extends LambdaExpression {
         static getName() { return name; }
         static getType() { return lambda(type, ValueType); }
-        compile(args) {
-            return { js: `this.as(${args[0].js}, ${JSON.stringify(type.name)})` };
+        compileFromArgs(args) {
+            return `this.as(${args[0]}, ${JSON.stringify(type.name)})`;
         }
     };
 }
 
-function fromContext(name: string, args: Array<CompiledExpression>) {
-    const argvalues = args.map(a => a.js).join(', ');
-    return { js: `this.${name}(${argvalues})` };
+function fromContext(name: string, args: Array<string>) {
+    return `this.${name}(${args.join(', ')})`;
 }
 

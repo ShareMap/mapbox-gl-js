@@ -15,14 +15,9 @@ import type { ExpressionName } from './expression_name';
 
 export type Expression = LambdaExpression | LiteralExpression; // eslint-disable-line no-use-before-define
 
-export type CompiledExpression = {|
-    result: 'success',
-    js: string,
-    type: Type,
-    isFeatureConstant: boolean,
-    isZoomConstant: boolean,
-    expression: Expression,
-    function?: Function
+export type CompileError = {|
+    error: string,
+    key: string
 |}
 
 class ParsingError extends Error {
@@ -62,13 +57,15 @@ class BaseExpression {
         (this: any).type = type;
     }
 
-    compile(_: Array<CompiledExpression>): {js?: string, isFeatureConstant?: boolean, isZoomConstant?: boolean, errors?: Array<string>} {
+    compile(): string | Array<CompileError> {
         throw new Error('Unimplemented');
     }
 
     serialize(_: boolean): any {
         throw new Error('Unimplemented');
     }
+
+    visit(fn: (BaseExpression) => void): void { fn(this); }
 }
 
 class LiteralExpression extends BaseExpression {
@@ -92,7 +89,7 @@ class LiteralExpression extends BaseExpression {
         return new this(context.key, type, value);
     }
 
-    compile() { return { js: JSON.stringify(this.value)}; }
+    compile() { return JSON.stringify(this.value); }
 
     serialize(_: boolean) {
         if (this.value === null || typeof this.value === 'string' || typeof this.value === 'boolean' || typeof this.value === 'number') {
@@ -117,11 +114,42 @@ class LambdaExpression extends BaseExpression {
         return new this.constructor(this.key, type, args);
     }
 
+    compile(): string | Array<CompileError> {
+        const errors: Array<CompileError> = [];
+        const compiledArgs: Array<string> = [];
+
+        const args = this.args;
+        for (let i = 0; i < args.length; i++) {
+            const arg = args[i];
+            const compiledArg = arg.compile();
+            if (Array.isArray(compiledArg)) {
+                errors.push.apply(errors, compiledArg);
+            } else {
+                compiledArgs.push(`(${compiledArg})`);
+            }
+        }
+
+        if (errors.length > 0) {
+            return errors;
+        }
+
+        return this.compileFromArgs(compiledArgs);
+    }
+
+    compileFromArgs(_: Array<string>): string | Array<CompileError> {
+        throw new Error('Unimplemented');
+    }
+
     serialize(withTypes: boolean) {
         const name = this.constructor.getName();
         const type = this.type.kind === 'lambda' ? this.type.result.name : this.type.name;
         const args = this.args.map(e => e.serialize(withTypes));
         return [ name + (withTypes ? `: ${type}` : '') ].concat(args);
+    }
+
+    visit(fn: (BaseExpression) => void) {
+        fn(this);
+        this.args.forEach(a => a.visit(fn));
     }
 
     // implemented by subclasses
