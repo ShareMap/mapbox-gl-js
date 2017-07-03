@@ -22,6 +22,7 @@ type CompileErrors = {|
 type CompiledExpression = {|
     result: 'success',
     function: Function,
+    functionSource: string,
     isFeatureConstant: boolean,
     isZoomConstant: boolean,
     expression: Expression
@@ -82,6 +83,7 @@ return this.unwrap(${compiled})
         return {
             result: 'success',
             function: fn.bind(evaluationContext()),
+            functionSource: compiled,
             isFeatureConstant: isFeatureConstant(checked.expression),
             isZoomConstant: isZoomConstant(checked.expression),
             expression: checked.expression

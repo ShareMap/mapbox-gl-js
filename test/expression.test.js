@@ -15,7 +15,7 @@ expressionSuite.run('js', {tests: tests}, (fixture) => {
     const compiled = compileExpression(fixture.expression);
 
     const testResult = {
-        compileResult: util.pick(compiled, ['result', 'js', 'isFeatureConstant', 'isZoomConstant', 'errors'])
+        compileResult: util.pick(compiled, ['result', 'functionSource', 'isFeatureConstant', 'isZoomConstant', 'errors'])
     };
     if (compiled.result === 'success') testResult.compileResult.type = compiled.expression.getResultType().name;
 

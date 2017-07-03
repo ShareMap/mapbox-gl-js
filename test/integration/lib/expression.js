@@ -5,6 +5,8 @@ const harness = require('./harness');
 const diff = require('diff');
 const fs = require('fs');
 
+const linter = require('eslint').linter;
+
 function deepEqual(a, b) {
     if (typeof a !== typeof b)
         return false;
@@ -48,7 +50,7 @@ exports.run = function (implementation, options, runExpressionTest) {
             const dir = path.join(directory, params.group, params.test);
 
             if (process.env.UPDATE) {
-                delete result.compileResult.js;
+                delete result.compileResult.functionSource;
                 fixture.expected = result;
                 fs.writeFile(path.join(dir, 'test.json'), `${JSON.stringify(fixture, null, 2)}\n`, done);
                 return;
@@ -56,13 +58,19 @@ exports.run = function (implementation, options, runExpressionTest) {
 
             const expected = fixture.expected;
 
-            let compiledJs;
-            if (result.compileResult.js) {
-                compiledJs = result.compileResult.js;
-                delete result.compileResult.js;
+            if (result.compileResult.functionSource) {
+                params.compiledJs = result.compileResult.functionSource;
+                delete result.compileResult.functionSource;
+                const lint = linter.verify(params.compiledJs, {
+                    parserOptions: { ecmaVersion: 5 }
+                }).filter(message => message.fatal);
+                if (lint.length > 0) {
+                    result.compileResult.lintErrors = lint;
+                }
             }
 
             const compileOk = deepEqual(result.compileResult, expected.compileResult);
+
             const evalOk = compileOk && deepEqual(result.evaluateResults, expected.evaluateResults);
             params.ok = compileOk && evalOk;
 
@@ -95,7 +103,6 @@ exports.run = function (implementation, options, runExpressionTest) {
             if (msg) { console.log(msg); }
 
             params.expression = JSON.stringify(fixture.expression, null, 2);
-            params.compiledJs = compiledJs;
 
             done();
         } catch (e) {
