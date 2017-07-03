@@ -167,5 +167,11 @@ function convertZoomFunction(parameters, propertySpec) {
 }
 
 function getFunctionType (parameters, propertySpec) {
-    return parameters.type || (propertySpec.function === 'interpolated' ? 'exponential' : 'interval');
+    if (parameters.type) {
+        return parameters.type;
+    } else if (propertySpec.function) {
+        return propertySpec.function === 'interpolated' ? 'exponential' : 'interval';
+    } else {
+        return 'exponential';
+    }
 }

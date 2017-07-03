@@ -722,7 +722,8 @@ test('categorical function', (t) => {
             stops: [[{zoom: 0, value: 'bar'}, 'zero']],
             default: 'default'
         }, {
-            type: 'string'
+            type: 'string',
+            function: 'interval'
         });
 
         t.equal(f(0, {}), 'default');
