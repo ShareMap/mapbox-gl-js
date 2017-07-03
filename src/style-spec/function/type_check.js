@@ -52,19 +52,18 @@ function typeCheckExpression(expected: Type, e: Expression, scope: Scope = new S
             expression: new Reference(e.key, e.name, referee.type)
         };
     } else if (e instanceof LetExpression) {
-        const bindings = {};
-        for (const name in e.scope.bindings) {
-            const value = e.scope.bindings[name];
+        const bindings = [];
+        for (const [name, value] of e.bindings) {
             const checkedValue = typeCheckExpression(typename('T'), value, scope);
             if (checkedValue.result === 'error') return checkedValue;
-            bindings[name] = checkedValue.expression;
+            bindings.push([name, checkedValue.expression]);
         }
         const nextScope = scope.concat(bindings);
         const checkedResult = typeCheckExpression(expected, e.result, nextScope);
         if (checkedResult.result === 'error') return checkedResult;
         return {
             result: 'success',
-            expression: new LetExpression(e.key, e.names, nextScope, checkedResult.expression)
+            expression: new LetExpression(e.key, bindings, checkedResult.expression)
         };
     } else {
         // e is a lambda expression, so check its result type against the

@@ -32,12 +32,15 @@ class ParsingError extends Error {
 class Scope {
     parent: ?Scope;
     bindings: {[string]: Expression};
-    constructor(parent?: Scope, bindings: {[string]: Expression} = {}) {
+    constructor(parent?: Scope, bindings: Array<[string, Expression]> = []) {
         this.parent = parent;
-        this.bindings = bindings;
+        this.bindings = {};
+        for (const [name, expression] of bindings) {
+            this.bindings[name] = expression;
+        }
     }
 
-    concat(bindings: {[string]: Expression}) {
+    concat(bindings: Array<[string, Expression]>) {
         return new Scope(this, bindings);
     }
 
@@ -67,7 +70,7 @@ class ParsingContext {
         this.scope = scope;
     }
 
-    concat(index?: number, expressionName?: string, bindings?: {[string]: Expression}) {
+    concat(index?: number, expressionName?: string, bindings?: Array<[string, Expression]>) {
         const path = typeof index === 'number' ? this.path.concat(index) : this.path;
         const ancestors = expressionName ? this.ancestors.concat(expressionName) : this.ancestors;
         const scope = bindings ? this.scope.concat(bindings) : this.scope;
@@ -215,13 +218,11 @@ class Reference extends BaseExpression {
 }
 
 class LetExpression extends BaseExpression {
-    names: Array<string>;
-    scope: Scope;
+    bindings: Array<[string, Expression]>;
     result: Expression;
-    constructor(key: string, names: Array<string>, scope: Scope, result: Expression) {
+    constructor(key: string, bindings: Array<[string, Expression]>, result: Expression) {
         super(key, result.type);
-        this.names = names;
-        this.scope = scope;
+        this.bindings = [].concat(bindings);
         this.result = result;
     }
 
@@ -229,9 +230,9 @@ class LetExpression extends BaseExpression {
         const names = [];
         const values = [];
         const errors = [];
-        for (const name in this.scope.bindings) {
+        for (const [name, expression] of this.bindings) {
             names.push(name);
-            const value = this.scope.bindings[name].compile();
+            const value = expression.compile();
             if (Array.isArray(value)) {
                 errors.push.apply(errors, value);
             } else {
@@ -254,8 +255,8 @@ class LetExpression extends BaseExpression {
 
     serialize(withTypes: boolean) {
         const serialized = ['let'];
-        for (const name of this.names) {
-            serialized.push(name, this.scope.get(name).serialize(withTypes));
+        for (const [name, expression] of this.bindings) {
+            serialized.push(name, expression.serialize(withTypes));
         }
         serialized.push(this.result.serialize(withTypes));
         return serialized;
@@ -263,8 +264,8 @@ class LetExpression extends BaseExpression {
 
     visit(fn: (BaseExpression) => void): void {
         fn(this);
-        for (const name in this.scope.bindings) {
-            this.scope.get(name).visit(fn);
+        for (const binding of this.bindings) {
+            binding[1].visit(fn);
         }
         this.result.visit(fn);
     }
@@ -273,8 +274,7 @@ class LetExpression extends BaseExpression {
         if (args.length < 3)
             throw new ParsingError(context.key, `Expected at least 3 arguments, but found ${args.length} instead.`);
 
-        const bindings: {[string]: Expression} = {};
-        const names = [];
+        const bindings: Array<[string, Expression]> = [];
         for (let i = 0; i < args.length - 1; i += 2) {
             const name = args[i];
             const key = context.path.concat(i + 1).join('.');
@@ -286,12 +286,11 @@ class LetExpression extends BaseExpression {
 
             const value = parseExpression(args[i + 1], context.concat(i + 2, 'let.binding'));
 
-            bindings[name] = value;
-            names.push(name);
+            bindings.push([name, value]);
         }
         const resultContext = context.concat(args.length, 'let.result', bindings);
         const result = parseExpression(args[args.length - 1], resultContext);
-        return new this(context.key, names, resultContext.scope, result);
+        return new this(context.key, bindings, result);
     }
 }
 
