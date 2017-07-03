@@ -284,7 +284,7 @@ const expressions: { [string]: Class<LambdaExpression> } = {
         static getName() { return 'coalesce'; }
         static getType() { return lambda(typename('T'), nargs(Infinity, typename('T'))); }
         compileFromArgs(args) {
-            return `this.coalesce(${args.map(a => `() => ${a}`).join(', ')})`;
+            return `this.coalesce(${args.map(a => `function () { return ${a} }.bind(this)`).join(', ')})`;
         }
     },
 

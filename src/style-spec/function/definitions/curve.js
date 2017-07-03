@@ -123,7 +123,7 @@ class CurveExpression extends LambdaExpression {
         return `(function () {
             var input = ${compiledArgs[1]};
             var stopInputs = [${stops.join(', ')}];
-            var stopOutputs = [${outputs.map(o => `() => ${o}`).join(', ')}];
+            var stopOutputs = [${outputs.map(o => `function () { return ${o}; }.bind(this)`).join(', ')}];
             return this.evaluateCurve(input, stopInputs, stopOutputs, ${JSON.stringify(this.interpolation)}, ${JSON.stringify(resultType)});
         }.bind(this))()`;
     }

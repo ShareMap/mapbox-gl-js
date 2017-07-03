@@ -122,7 +122,10 @@ class LiteralExpression extends BaseExpression {
         return new this(context.key, type, value);
     }
 
-    compile() { return JSON.stringify(this.value); }
+    compile() {
+        const value = JSON.stringify(this.value);
+        return typeof this.value === 'object' ?  `(${value})` : value;
+    }
 
     serialize(_: boolean) {
         if (this.value === null || typeof this.value === 'string' || typeof this.value === 'boolean' || typeof this.value === 'number') {

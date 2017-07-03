@@ -68,12 +68,12 @@ class MatchExpression extends LambdaExpression {
                 assert(this.args[i] instanceof LiteralExpression);
                 inputs.push((this.args[i] : any));
             } else {
-                outputs.push(`() => ${compiledArgs[i]}`);
+                outputs.push(`function () { return ${compiledArgs[i]} }.bind(this)`);
             }
         }
 
         // 'otherwise' case
-        outputs.push(`() => ${compiledArgs[compiledArgs.length - 1]}`);
+        outputs.push(`function () { return ${compiledArgs[compiledArgs.length - 1]} }.bind(this)`);
 
         // Construct a hash from input values (tagged with their type, to
         // distinguish e.g. 0 from "0") to the index of the corresponding
